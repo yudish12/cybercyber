@@ -129,7 +129,9 @@ Missing/empty/unparsable = **F1 fail**.
   - Non-scored privileged creds (admin/DB/API/session) fresh per boot, high-entropy, **not literals** in
     compose/`.env`/source. → **EN3**
   - `main`'s `environment:` contains **no** secret-shaped var and **no** internal-target hint. → **EN2**
-- App source (`web/`, `<app>/`, custom API) — the single scored flaw lives here:
+- App source (`web/`, `<app>/`, custom API) — the single scored flaw lives here. Confirm the scored flaw
+  matches its planted **BAD** pattern and each sibling matches the **GOOD** pattern for its type
+  (`guidelines.md` §5.4 per-type reference):
   - **Scale/authenticity:** multi-module, depth beyond the exploit path, realistic seed volume, coherent
     identity model. → **EN1**
   - **Vulnerable feature does real work** on normal input (export writes a file; create persists + is
@@ -140,7 +142,8 @@ Missing/empty/unparsable = **F1 fail**.
     real-but-dead decoys; no decoy names/reveals the real target in one step. → **VU6**
   - A **resisting sibling endpoint** on the same resource (verified by attempting the chain); sibling
     verbs/adjacent features carry no identical hole; nothing survives the documented fix; not a
-    router-global bypass. → **VU3**
+    router-global bypass. Apply the **smallest-defeat test** to every fix/sibling (`guidelines.md` §5.1a:
+    a partial fix is a second path to the marker). → **VU3**
   - Marker minted fresh per boot (CSPRNG; no empty-string `os.environ.get(X,"")` footgun), disclosed only
     via the real vuln, re-derived live; no leftover/foreign `NAME=<hex>` reachable over HTTP. → **VU2**
   - No `/internal` `/debug` `/verifier` `/audit` `/dump` `/seed` `/reset` route returns any secret —
@@ -168,6 +171,9 @@ Missing/empty/unparsable = **F1 fail**.
 - Also writes a sample `report.md` for the oracle's report side. Has the exec bit. → **F1**
 
 ### 3.5 `tests/` → F5, EV1–EV5, RB1, RB2, RB3
+Audit the verifier against the **four properties of a sound gate** (`guidelines.md` §6.2: fails closed /
+ordered / bound to the exploit act / live and independent), the **tight-vs-loose check table** (same
+section), and the **six determinism sources** (§6.6). Each one below maps to one of those.
 - `tests/test.sh` **fail-closed**: writes a default reward **before** any fallible op; no `set -e`
   footgun (guard every `$(...)`); malformed/non-UTF-8 submission ⇒ caught ⇒ reward 0, never a crash.
   **Every** branch writes **both** reward files. → **F5**
@@ -275,6 +281,11 @@ behavior-solves.
 - Each genuine non-solve gets **exactly one** failure mode (`guidelines.md` §7.5), trajectory-supported,
   at the blocking stage. → **TR5**
 
+**Diagnostic order for a 0-of-5 / suspicious result** (rule out in sequence before calling it difficulty):
+**verifier soundness** (§6.2/§6.6; Oracle already = 1) → **gold/oracle** (golden solve still recovers on a
+fresh boot) → **discoverability** (honest L0/L1 path, non-solvers actually reached the surface) → only then
+**genuine difficulty**.
+
 **If 5 of 5 solve** → too easy → HARDEN (`guidelines.md` §5.1; add a service only if it keeps the same
 CWE), run a **local** pass@5 (`./blackbox-pentest-pass1/run-blackbox-pentest-pass1.sh task`) to confirm,
 **re-walk from P1** (regenerate all evidence, else TR4 stale-fail); the platform re-runs the official
@@ -286,6 +297,10 @@ pass@5.
 ---
 
 ## 8. P6 — External fields + packaging + ship
+
+> Run [`pre-submission-checklist.md`](pre-submission-checklist.md) end to end here (or hand it to a
+> subagent with the task path). It consolidates every check below into one agent-runnable pass with
+> PASS/FAIL/NOT-VERIFIED evidence and a ship/not-yet verdict.
 
 **External submission fields** (not in the archive; required for QC — F4 + Spam Check):
 - **Vulnerability Type** = the **most precise** CWE class the solve uses (not generic "Broken Access
