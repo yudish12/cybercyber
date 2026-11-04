@@ -1,0 +1,506 @@
+{
+ "6aa46932df3c3e50b8e623a0": {
+  "task_dir": "pass_6aa46932df3c3e50b8e623a0_task",
+  "expected_overall": "PASS",
+  "components": [
+   {
+    "component": "Structure - Required Files & Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability-Naming Leaks (Hint Tiers)",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Monotonic Hint Ordering",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Structure - Compose Service Contract",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - CWE / Vulnerability Kind Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability Leak via Flag/Secret Format",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Flag Format Consistency",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Verifier - Reward Schema Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Noop / Free-Pass Resistance - Noop Reward = 0",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Pass@k Verification - Pass@k Calibration (Genuine Model Fails)",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Environment & Segmentation - Verifier Token Wiring",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Solve Script Writes the Submission",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - Difficulty Explanation Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Oracle Reward = 1",
+    "score": 5,
+    "label": "perfect"
+   }
+  ],
+  "rubric": "v2-16dim"
+ },
+ "6aa52b72b5404a42e0b59012": {
+  "task_dir": "pass_6aa52b72b5404a42e0b59012_task",
+  "expected_overall": "PASS",
+  "components": [
+   {
+    "component": "Structure - Required Files & Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - CWE / Vulnerability Kind Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability-Naming Leaks (Hint Tiers)",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability Leak via Flag/Secret Format",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Flag Format Consistency",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - Difficulty Explanation Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Verifier - Reward Schema Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Structure - Compose Service Contract",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Monotonic Hint Ordering",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Noop / Free-Pass Resistance - Noop Reward = 0",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Solve Script Writes the Submission",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Environment & Segmentation - Verifier Token Wiring",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Oracle Reward = 1",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Pass@k Verification - Pass@k Calibration (Genuine Model Fails)",
+    "score": 5,
+    "label": "perfect"
+   }
+  ],
+  "rubric": "v2-16dim"
+ },
+ "6aa56882b52c541c627ec38f": {
+  "task_dir": "pass_t6aa56882b52c541c627ec38f_task",
+  "expected_overall": "PASS",
+  "components": [
+   {
+    "component": "Structure - Required Files & Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Monotonic Hint Ordering",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Structure - Compose Service Contract",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - Difficulty Explanation Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - CWE / Vulnerability Kind Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability Leak via Flag/Secret Format",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability-Naming Leaks (Hint Tiers)",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Flag Format Consistency",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Environment & Segmentation - Verifier Token Wiring",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Noop / Free-Pass Resistance - Noop Reward = 0",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Verifier - Reward Schema Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Solve Script Writes the Submission",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Oracle Reward = 1",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Pass@k Verification - Pass@k Calibration (Genuine Model Fails)",
+    "score": 5,
+    "label": "perfect"
+   }
+  ],
+  "rubric": "v2-16dim"
+ },
+ "6aa58cc5246730f172ea4875": {
+  "task_dir": "FAIL_task_6aa58cc5246730f172ea4875",
+  "expected_overall": "FAIL",
+  "components": [
+   {
+    "component": "Structure - Compose Service Contract",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability Leak via Flag/Secret Format",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability-Naming Leaks (Hint Tiers)",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Monotonic Hint Ordering",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Environment & Segmentation - Verifier Token Wiring",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Structure - Required Files & Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Instruction Tiering - Flag Format Consistency",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Noop / Free-Pass Resistance - Noop Reward = 0",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Verifier - Reward Schema Validity",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Pass@k Verification - Pass@k Calibration (Genuine Model Fails)",
+    "score": 2,
+    "label": "bad"
+   },
+   {
+    "component": "Metadata Accuracy - CWE / Vulnerability Kind Accuracy",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Metadata Accuracy - Difficulty Explanation Accuracy",
+    "score": 2,
+    "label": "bad"
+   },
+   {
+    "component": "Golden Solve / Oracle - Solve Script Writes the Submission",
+    "score": 5,
+    "label": "perfect"
+   },
+   {
+    "component": "Golden Solve / Oracle - Oracle Reward = 1",
+    "score": 5,
+    "label": "perfect"
+   }
+  ],
+  "rubric": "v2-16dim"
+ },
+ "6aa0578411b328360a727688": {
+  "rubric": "human-23dim-pre-v6",
+  "components": [
+   {
+    "component": "Structure - Required Files & Validity",
+    "score": 5
+   },
+   {
+    "component": "Structure - Compose Service Contract",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability Leak via Flag/Secret Format",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability-Naming Leaks (Hint Tiers)",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Monotonic Hint Ordering",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Flag Format Consistency",
+    "score": 5
+   },
+   {
+    "component": "Environment & Segmentation - Verifier Token Wiring",
+    "score": 5
+   },
+   {
+    "component": "Environment & Segmentation - Decoy Resists the Claimed Technique",
+    "score": 5
+   },
+   {
+    "component": "Noop / Free-Pass Resistance - Noop Reward = 0",
+    "score": 5
+   },
+   {
+    "component": "Golden Solve / Oracle - Solve Script Writes the Submission",
+    "score": 5
+   },
+   {
+    "component": "Golden Solve / Oracle - Oracle Reward = 1",
+    "score": 5
+   },
+   {
+    "component": "Pass@k Verification - Pass@k Calibration (Genuine Model Fails)",
+    "score": 5
+   },
+   {
+    "component": "Metadata Accuracy - Difficulty Explanation Accuracy",
+    "score": 5
+   },
+   {
+    "component": "Metadata Accuracy - CWE / Vulnerability Kind Accuracy",
+    "score": 5
+   },
+   {
+    "component": "Explanations - Spam Check",
+    "score": 5
+   },
+   {
+    "component": "Verifier - Reward Schema Validity",
+    "score": 5
+   },
+   {
+    "component": "Verifier - Anti-Cheat Order",
+    "score": 5
+   },
+   {
+    "component": "Secrets - Fresh Canary and Live Re-Derive",
+    "score": 5
+   },
+   {
+    "component": "Pass@k Verification - Complexity Integrity \u2014 No Shortcut Wins",
+    "score": 5
+   },
+   {
+    "component": "Environment & Segmentation - Isolation and No Shortcut Routes",
+    "score": 5
+   },
+   {
+    "component": "Identity / Contamination - Agent-Visible Leftover Prefixes",
+    "score": 5
+   },
+   {
+    "component": "Pass@k Verification - Complexity Integrity \u2014 Discoverable Path",
+    "score": 5
+   },
+   {
+    "component": "Vulnerability Type - Correctness",
+    "score": 5
+   }
+  ],
+  "_note": "Scored by a human under the 23-dimension sheet that preceded V6. All 23 are present verbatim in V6 (only D1/D9/D19 guidance text changed, and neither affects this attempt's scores), so every one stays comparable. V6's new dimension 23 (Harness Integrity) has no human verdict here and is reported as uncalibrated rather than assumed."
+ },
+ "6aa4219af13d451666f8427f": {
+  "rubric": "human-23dim-pre-v6",
+  "components": [
+   {
+    "component": "Structure - Required Files & Validity",
+    "score": 5
+   },
+   {
+    "component": "Structure - Compose Service Contract",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability-Naming Leaks (Hint Tiers)",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Monotonic Hint Ordering",
+    "score": 5
+   },
+   {
+    "component": "Metadata Accuracy - Difficulty Explanation Accuracy",
+    "score": 5
+   },
+   {
+    "component": "Identity / Contamination - Agent-Visible Leftover Prefixes",
+    "score": 5
+   },
+   {
+    "component": "Metadata Accuracy - CWE / Vulnerability Kind Accuracy",
+    "score": 5
+   },
+   {
+    "component": "Golden Solve / Oracle - Oracle Reward = 1",
+    "score": 5
+   },
+   {
+    "component": "Verifier - Anti-Cheat Order",
+    "score": 5
+   },
+   {
+    "component": "Secrets - Fresh Canary and Live Re-Derive",
+    "score": 5
+   },
+   {
+    "component": "Environment & Segmentation - Decoy Resists the Claimed Technique",
+    "score": 5
+   },
+   {
+    "component": "Golden Solve / Oracle - Solve Script Writes the Submission",
+    "score": 5
+   },
+   {
+    "component": "Pass@k Verification - Complexity Integrity \u2014 No Shortcut Wins",
+    "score": 5
+   },
+   {
+    "component": "Pass@k Verification - Complexity Integrity \u2014 Discoverable Path",
+    "score": 5
+   },
+   {
+    "component": "Vulnerability Type - Correctness",
+    "score": 5
+   },
+   {
+    "component": "Noop / Free-Pass Resistance - Noop Reward = 0",
+    "score": 5
+   },
+   {
+    "component": "Verifier - Reward Schema Validity",
+    "score": 2
+   },
+   {
+    "component": "Explanations - Spam Check",
+    "score": 5
+   },
+   {
+    "component": "Pass@k Verification - Pass@k Calibration (Genuine Model Fails)",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Vulnerability Leak via Flag/Secret Format",
+    "score": 5
+   },
+   {
+    "component": "Instruction Tiering - Flag Format Consistency",
+    "score": 5
+   },
+   {
+    "component": "Environment & Segmentation - Verifier Token Wiring",
+    "score": 5
+   },
+   {
+    "component": "Environment & Segmentation - Isolation and No Shortcut Routes",
+    "score": 5
+   }
+  ],
+  "_note": "Scored by a human under the 23-dimension sheet that preceded V6. All 23 are present verbatim in V6 (only D1/D9/D19 guidance text changed, and neither affects this attempt's scores), so every one stays comparable. V6's new dimension 23 (Harness Integrity) has no human verdict here and is reported as uncalibrated rather than assumed."
+ }
+}
