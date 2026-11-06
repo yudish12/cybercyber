@@ -13,6 +13,7 @@ grep -nE '^(name|cwe|vulnerability_kind|version)\b|\[task\]|\[metadata\]' "$ROOT
 
 sec "HARNESS / CONFIG (read each in full)"
 exists task.toml instruction.md instruction_L0.md instruction_L1.md instruction_L2.md fresh_state.json \
+       delivery.json \
        environment/docker-compose.yaml environment/docker-compose.yml environment/NOTICE.md
 
 sec "DOCKERFILES (read each — digest pins, non-root agent)"

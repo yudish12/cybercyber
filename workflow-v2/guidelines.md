@@ -52,9 +52,11 @@ changing `FLAG5=` to `check=` changes nothing — **close the endpoint, don't re
   to confirm, then resubmit — the platform re-runs it.
 - **The difficulty run normally targets L0.** Regenerate it after any change to agent-visible behavior,
   exploitability, the verifier, or scoring.
-- **Budget = 200 steps / 4 hours per trial.** `task.toml [agent] timeout_sec` is now **REQUIRED**, set
-  once, derived from the step budget: `timeout_sec ≈ max_turns × 120s ≈ 14400s` for 200 steps. The
-  problem to avoid is a timeout **below** that floor (it cuts trials short), not shipping one.
+- **Budget = 200 steps / 4 hours per trial, owned by the pass@k runner.** Do **NOT** set `task.toml
+  [agent] timeout_sec`. The current platform QA (`check_agent_timeout_sec`) **fails** the task when that
+  key exists, because it silently overrides the runner's own job-level timeout. (Older guidance called it
+  "required ≈ 14400"; that is **stale** — the runner now owns the budget. If a template or a prior task
+  ships it, delete the line.)
 - **`main` runs `network_mode: no-network`.** No external internet, no injected `http_proxy`, nothing to
   misconfigure. Because there is no proxy there is **no `NO_PROXY` to set**, and a `NO_PROXY`/`no_proxy`
   value naming internal hosts is itself a **recon leak** — do not ship one.
@@ -143,6 +145,9 @@ error usually means you probed too early.
 ## 4. Instruction tiers (strict supersets; L2 ⊃ L1 ⊃ L0)
 
 - **L0** = target + credentials only. Authorized/defensive framing (avoids refusals). **No** mechanism.
+  **L0 must resolve the credentials question explicitly** — either hand over the foothold creds **or**
+  state in one sentence that none are needed (e.g. "No credentials are provided; the target requires none
+  to begin testing."). An L0 that is silent about credentials fails `tier_discoverability_contract`.
 - **L1** = L0 + the **mechanism in plain words**. **No** class/CWE name, **no** exact `/api/...` path.
 - **L2** = L1 + the **exact URL** + a **full actionable recipe** + the **explicit class/CWE named**.
   (All three required — behavior described but class unnamed still fails.)
@@ -486,8 +491,19 @@ Pick exactly one, trajectory-supported, at the blocking stage; cite the trial di
   (marker, decoy tokens) and what stays stable across a restart. Not a placeholder.
 - **`environment/NOTICE.md`** documents every third-party component: provenance (upstream source +
   version), license, and the base-image digest pin.
-- **Agent image** installs `harbor-rewardkit` from the committed `environment/agent/vendor-wheels/` (no
-  network at build).
+- **Vendor every image's pip deps, not just the agent's** — any service Dockerfile running
+  `pip install` against live PyPI (no `--no-index`/`--find-links`, no `--require-hashes`) is an
+  EN4 hermeticity fail even when NOTICE.md documents the packages. Commit the wheel set (amd64,
+  matching the service's `platform:` pin) and install offline; `COPY <dir> /tmp/` copies the
+  directory's CONTENTS, so COPY to an explicit path (`COPY vendor-wheels /tmp/vendor-wheels`).
+  Confirmed live: glpi-estate/xxe's gateway (fixed 2026-11-05 by vendoring 12 wheels) and
+  archive/task-1 (`internal_service` + unpinned agent `pip install requests`) both failed EN4
+  on this. Build-time `apt` is fine — it resolves against the digest-pinned base snapshot.
+- **`[environment] cpus` must fit the smallest host that will ever boot the task.** Harbor writes
+  the ceiling onto `main`; a `cpus = 2.0` task on a 1-CPU sandbox fails all trials with
+  "range of CPUs is from 0.01 to 1.00" before the agent even starts (confirmed live 2026-11-05 —
+  5/5 sandbox trials dead). `cpus = 1.0` satisfies the declared-ceiling requirement AND boots
+  anywhere; GLPI-class stacks are idle enough during trials that 1.0 costs nothing.
 - Keep exploit narration out of the agent-readable tree. Strip authored comments from source/env files
   before packaging (keep shebangs and upstream license headers); re-validate and re-run oracle/noop — a
   strip that changes behavior is a bug.
@@ -495,12 +511,26 @@ Pick exactly one, trajectory-supported, at the blocking stage; cite the trial di
   `task.toml`, or any `instruction*.md` may be **newer** than your `trajectories/` evidence. Freshness is
   judged by mtime, not by whether you deemed the edit harmless. Touch any of those after capture ⇒ re-run
   Oracle + Noop and obtain a fresh pass@5.
-- **Archive from the shell**, exec bits set **inside** the final archive, no `__MACOSX/` / `._*`:
+- **Normalize perms for the harness copy-in, then archive from the shell** (exec bits set **inside** the
+  final archive, no `__MACOSX/` / `._*`). The harness copies the tree in and runs `solve.sh`/the entry
+  scripts **as the non-root `agent` user**, so every dir must be traversable and every file world-readable
+  — a `700`/`600`/`711` tree (a common extraction artifact, or left by the editor on a bind-mounted file)
+  makes the oracle silently fail to boot. Use `755`/`644`, not `chmod +x` (which can yield `711`):
   ```
-  chmod +x task/solution/solve.sh task/tests/test.sh task/tests/isolation_test.sh task/environment/*/entrypoint.sh
+  # 1) world-readable + traversable tree (fixes 700/600 extraction artifacts)
+  find task -type d -exec chmod 755 {} +
+  find task -type f -exec chmod 644 {} +
+  # 2) exec bit on EVERY script, including bind-mounted entrypoints at any depth
+  find task -type f -name '*.sh' -exec chmod 755 {} +
+  find task -type f -name '*.py' -path '*entrypoint*' -exec chmod 755 {} +
+  chmod 755 task/solution/solve.sh task/tests/test.sh task/tests/isolation_test.sh
+  # 3) package + verify
   COPYFILE_DISABLE=1 tar --no-xattrs -czf task.tgz task
-  tar -tvzf task.tgz | grep -E '(solve|test|isolation_test|entrypoint)\.sh$'
+  tar -tvzf task.tgz | grep -E '\.(sh|py)$'      # scripts show rwxr-xr-x; nothing is rw-------/rwx--x--x
   ```
+  **Any bind-mounted script re-saved by the editor loses its exec bit** (the Write tool does not preserve
+  it) — re-`chmod 755` after every edit, and make `db`-style entrypoints robust by invoking them as
+  `entrypoint: [/bin/sh, /db-entrypoint.sh]` so a lost bit can't break the boot.
 
 ### 8.2 External submission fields (not in the archive; required for QC — F4 + Spam Check)
 - **Vulnerability Type** = the **most precise** CWE class the solve actually uses (not generic "Broken
@@ -550,11 +580,18 @@ auditor score these. ↔ = cross-fails another dimension; fix both.)
   coherent identity model.
 - **EN2 Isolation & Segmentation** — siblings `internal: true` (`main` off it), verified unreachable; no
   debug/backdoor/dump/verifier-only route yields the secret; **no container-escape privilege on `main`**;
-  no `NO_PROXY` leaking internal hosts. ↔ VU2/EV2.
+  no `NO_PROXY` leaking internal hosts. **No credential- or ground-truth-bearing file or volume is mounted
+  on the vulnerable service's filesystem** — the scored marker **and** every secret (DB/root/admin creds,
+  the real grading token) must live on a *different* container the vuln can't read, not merely be `600`/
+  root-owned on the same FS (perms alone fail `decoy_cross_path_isolation`; a file-read vuln that can
+  reach the path is what's scored, so move the secret off the path). ↔ VU2/EV2.
 - **EN3 Credential & Egress Hygiene** — non-scored creds fresh/high-entropy/non-literal; egress blocks by
   IP class. ↔ EN4.
 - **EN4 Operational & Reproducibility** — replay fails; hermetic (no runtime pip/apt/curl of remote
-  resources); deterministic; declared ceilings; digest pins + `NOTICE.md` provenance/licensing. ↔
+  resources; **build-time pip is also in scope for EVERY image — live PyPI in any Dockerfile = EN4
+  fail, not just the agent's**); deterministic; declared ceilings (**`cpus` sized to the smallest
+  host that boots the task — local pass@1 sandboxes can be 1 CPU; `cpus = 1.0` is the safe
+  ceiling**); digest pins + `NOTICE.md` provenance/licensing. ↔
   F6/EN3/VU2/EV4.
 - **EN5 Error Handling & Logging** — malformed input → ordinary errors (no trace/path/SQL, debug off);
   security events logged with actor+resource+outcome+timestamp. ↔ EV4.
@@ -616,10 +653,24 @@ auditor score these. ↔ = cross-fails another dimension; fix both.)
 
 ---
 
-## 11. Five that keep biting
+## 11. Seven that keep biting
 1. **Rename is not a fix** — close the endpoint, don't rebrand the value.
 2. **One live surface** — every other vuln provably inert; ≥3 surfaces, exactly one scored.
 3. **Fail closed** — write a default reward before anything can abort.
 4. **Trace, don't trust** — read the source, not the note.
 5. **Capture evidence last, package from the shell** — any late source edit invalidates every
    trajectory.
+6. **A behavior change ripples into ~8 files — reconcile all of them in one pass.** Changing what an
+   endpoint does / what it returns / the recipe means updating, together: all **three instruction tiers**
+   (esp. the L2 recipe), `task.toml` `difficulty_explanation`, `solution/solve.sh`, the app source,
+   `operator/behavior-catalog.json` + `operator/report-rubric.json` (or the merged `tests/` form),
+   `unintended_findings.json`, and `fresh_state.json`. Missing one is a `tier_discoverability_contract` /
+   `F4` fail. After any such change, grep the endpoint + contract string across every tier and the solve
+   and confirm they say the same thing (see the §8.1 reconciliation grep). Fixing them piecemeal across
+   edits is how this slips.
+7. **Half the QC dimensions are LLM-judged and don't run without an API key.** The local static QA
+   validates only the mechanical half; `tier_discoverability_contract`, `decoy_cross_path_isolation`,
+   `VU5`, `EV2`, `RB1`, `safety_framing` and the other judge rows return `401` locally. **Run the judge
+   with a key before submitting**, or self-audit those rows by hand (`qc-audit-v4` / `manual-qc-audit`
+   encode them) — otherwise the platform is the first place they ever run and each submission surfaces a
+   fresh backlog of "new" FAILs.

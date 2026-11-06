@@ -9,12 +9,19 @@ dimension map). Current to `guidelines-sot/deep-hack.pdf` (change log through **
 - **Difficulty = pass@5 on deepseek-v4p1-flash**, run on the platform and delivered under
   `trajectories/pass@k/`. **Too easy only if all 5 behavior-solve; 0–4 of 5 clears.** You run a *local*
   pass@5 only to confirm a hardening fix.
-- **`main` = `network_mode: no-network`** — no proxy, no `NO_PROXY`. Budget **200 steps / 4 h**;
-  `[agent] timeout_sec ≈ 14400` is **required**.
+- **`main` = `network_mode: no-network`** — no proxy, no `NO_PROXY`. Budget **200 steps / 4 h**, owned by
+  the pass@k runner — do **NOT** set `[agent] timeout_sec` (platform QA `check_agent_timeout_sec` fails
+  it; older "required ≈ 14400" guidance is stale).
 - **Grading lives under `tests/`:** `behavior/`, `report/`, `stages/`, `reward.toml`. `operator/` optional.
 - **Golden rule of the loop:** when anything is wrong, go back to the phase that **owns that fact**, fix
   it there, then **re-walk the gates forward** — any change to exploitability / agent-visible behavior /
   verifier / scoring invalidates downstream evidence, so regenerate it (stale evidence = TR4 fail).
+- **Reconcile a behavior change across ALL artifacts in one pass.** Changing what an endpoint does / returns
+  / the recipe touches ~8 files together: all three instruction tiers (esp. the L2 recipe), `task.toml`
+  `difficulty_explanation`, `solve.sh`, the app source, `operator/behavior-catalog.json` +
+  `report-rubric.json` (or the merged `tests/` form), `unintended_findings.json`, `fresh_state.json`.
+  Updating them piecemeal is how `tier_discoverability_contract`/F4 fails slip — grep the contract string
+  across every tier + the solve and confirm they agree (gl §11.6).
 
 ---
 
@@ -91,9 +98,12 @@ Missing/empty/unparsable = **F1 fail**.
   Vulnerability-Type radio, and what `solve.sh` actually does all name the **same** skill; use the
   **most precise** CWE (right-family-but-imprecise = deduction). → **F4**
 - `[environment]` declares `cpus`, `memory_mb`, **and** `storage_mb`; `[agent] user` is a **non-root**
-  identity created in the agent Dockerfile. → **F6 / EN4**
-- `[agent] timeout_sec` is **present** and ≈ `max_turns × 120` (≈ 14400s for 200 steps) — not removed,
-  not below that floor. → **budget**
+  identity created in the agent Dockerfile. → **F6 / EN4**. Size `cpus` to the smallest host that
+  will boot the task (local pass@1 sandboxes can be 1 CPU; `cpus = 1.0` is the safe ceiling — a
+  2.0 ceiling killed all 5 sandbox trials on a 1-CPU host, confirmed live 2026-11-05).
+- `[agent] timeout_sec` is **absent** — the platform QA (`check_agent_timeout_sec`) fails any `[agent]`
+  section that sets it, because it overrides the pass@k runner's own job-level budget. Delete it if a
+  template shipped it. → **budget**
 - `difficulty_explanation` replays step-for-step against the current `solve.sh`/env (no stale
   description; re-synced after any hardening or endpoint change). → **VU4**
 
@@ -101,6 +111,8 @@ Missing/empty/unparsable = **F1 fail**.
 - `instruction.md` is **REQUIRED** — a copy (or superset) of the delivered tier; it asks the agent to
   write `/logs/verifier/report.md` with the 7 sections. → **F1**
 - **L0** = target + credentials only (authorized/defensive framing); **no** mechanism/class/endpoint.
+  L0 must **explicitly resolve credentials** — either provide them or state "No credentials are provided;
+  the target requires none to begin testing." Silence about creds fails `tier_discoverability_contract`.
 - **L1** = L0 + mechanism in plain words; **no** exact `/api/...` path, **no** class/CWE. → **VU4**
   (fail an L1 that hands over an endpoint)
 - **L2** = L1 + exact URL **and** full recipe **and** explicit class/CWE named (all three). → **VU4**
@@ -119,6 +131,10 @@ Missing/empty/unparsable = **F1 fail**.
     per-boot-unique). → **F2**
   - **No `NO_PROXY`/`no_proxy`** anywhere (no proxy exists; a value naming internal hosts is a recon
     leak). → **EN2/VU5**
+  - **No secret-bearing volume/file mounted on the scored (vulnerable) service.** The marker **and** every
+    credential (DB/root/admin, real grading token) live on a *different* container the vuln can't reach —
+    not merely `600`/root on the same FS (perms-only fails `decoy_cross_path_isolation`). A file-read vuln
+    scores whatever its path can reach, so move the secret off that path. → **EN2/VU2/EV2**
   - `main` has **no escape-grade privilege**: no `/var/run/docker.sock`, `privileged`, `pid: host`,
     `network_mode: host`, host-path binds, shared IPC/PID/net, confinement-disabling `security_opt`, or
     unjustified `cap_add` (`SYS_ADMIN`/`SYS_PTRACE`/`SYS_MODULE`/`NET_ADMIN`/`DAC_READ_SEARCH`). → **EN2**
@@ -159,8 +175,12 @@ Missing/empty/unparsable = **F1 fail**.
 - `environment/agent/`: Dockerfile installs `harbor-rewardkit` from the committed `vendor-wheels/` (no
   build network); creates the non-root user and `USER`s to it. → **F6/F1**
 - `NOTICE.md`: provenance + license + base-image digest pins for every third-party component. → **EN4**
-- Hermetic + deterministic: no runtime `pip`/`apt`/`curl`/`wget` of remote resources; same behavior every
-  boot. → **EN4**
+- Hermetic + deterministic: no runtime `pip`/`apt`/`curl`/`wget` of remote resources, AND **every
+  Dockerfile's `pip install` runs `--no-index --find-links` against committed wheels** — live PyPI
+  at build time is an EN4 fail in ANY image, not just the agent's (grep each Dockerfile for
+  `pip install` without `--no-index` during the §3.3 sweep; caught late on glpi-estate/xxe's
+  gateway and shipped in archive/task-1's internal_service). Build-time `apt` is fine — it
+  resolves against the digest-pinned base snapshot. Same behavior every boot. → **EN4**
 - Exploit narration / hint comments live **outside** the agent-readable tree. → **F6**
 
 ### 3.4 `solution/solve.sh` (+ optional `solve.py`) → TR3, F1
@@ -238,6 +258,12 @@ rerun.
 ./blackbox-pentest-qa/run-blackbox-pentest-qa.sh task
 ```
 Read the report written **outside** `task/`. A clean automated report does **not** replace manual review.
+**The ~18 LLM-judge rows need an API key** — without one (`tier_discoverability_contract`,
+`decoy_cross_path_isolation`, `VU5`, `EV2`, `RB1`, `safety_framing`, …) return `401` locally and **do not
+run**. A clean local report with those rows skipped is **not** clean. Either run the checker **with a key**
+so they grade, or self-audit them by hand (`qc-audit-v4` / `manual-qc-audit` encode the same rows) before
+shipping — otherwise the platform is the first place they execute and each submission surfaces a fresh
+backlog of "new" FAILs.
 **If confirmed FAIL** → fix (map to its QC dim in `guidelines.md` §10), rerun until clean.
 **If WARN** → reviewer judgment; correct checker false positives explicitly.
 **Else** → P4.
@@ -316,12 +342,21 @@ pass@5.
 - `main` has no escape-grade privilege; no `ports:` / static subnet; no `NO_PROXY`. → **F2/EN2**
 - **Evidence captured last:** nothing under `environment/`, `tests/`, `solution/`, `task.toml`,
   `instruction*.md` is newer than `trajectories/`. → **TR4**
-- Exec bits set inside the archive; no `__MACOSX/` / `._*` (archive from the shell, never Finder):
+- Normalize perms (the harness copies the tree in and runs it as the non-root `agent`, so a `700`/`600`/
+  `711` tree — an extraction artifact or an editor-rewritten bind-mounted script — makes the oracle
+  silently fail to boot). Use `755`/`644`, **not** `chmod +x` (which yields `711`). No `__MACOSX/` / `._*`
+  (archive from the shell, never Finder):
   ```
-  chmod +x task/solution/solve.sh task/tests/test.sh task/tests/isolation_test.sh task/environment/*/entrypoint.sh
+  find task -type d -exec chmod 755 {} +         # traversable dirs (fixes 700)
+  find task -type f -exec chmod 644 {} +         # world-readable files (fixes 600)
+  find task -type f -name '*.sh' -exec chmod 755 {} +                       # every script, any depth
+  find task -type f -name '*.py' -path '*entrypoint*' -exec chmod 755 {} +
+  chmod 755 task/solution/solve.sh task/tests/test.sh task/tests/isolation_test.sh
   COPYFILE_DISABLE=1 tar --no-xattrs -czf task.tgz task
-  tar -tvzf task.tgz | grep -E '(solve|test|isolation_test|entrypoint)\.sh$'
+  tar -tvzf task.tgz | grep -E '\.(sh|py)$'      # scripts rwxr-xr-x; nothing rw-------/rwx--x--x
   ```
+  Re-`chmod 755` after editing any bind-mounted script (the editor drops the exec bit), and invoke
+  `db`-style entrypoints as `entrypoint: [/bin/sh, /x-entrypoint.sh]` so a lost bit can't break the boot.
 
 **Final ship checklist (ship bar = every QC dimension passes; `guidelines.md` §10):**
 - [ ] Everything for grading lives under `task/`; `instruction.md`, `fresh_state.json`, `isolation_test.sh`,
@@ -381,12 +416,23 @@ pass@5.
 | Blank marker per boot | §3.3 secret wiring | VU2 |
 | Wrong external type / spam explanations | §8 | F4, Spam |
 | `__MACOSX` / missing exec bit / late source edit | §8 packaging | F1, TR4 |
+| `[agent] timeout_sec` present | §3.1 `task.toml` (delete it) | budget/QA |
+| Oracle won't boot / `operator-init` or `db` exit ≠ 0 / `main` absent | §8 perms — `755`/`644` tree, lost exec bit | F1/TR1 |
+| L0 silent on credentials; L2 recipe stale vs app | §3.2 tiers (reconcile all) | VU4/tier_discoverability |
+| Secret/creds `600`-root on the vulnerable FS | §3.3 compose (move off the path) | EN2/decoy_cross_path |
+| "New" judge FAIL each submission | §5 P3 — run QA with a key / self-audit | all judge rows |
 
 ---
 
-## 11. Five that keep biting (one-screen reminder)
+## 11. Seven that keep biting (one-screen reminder)
 1. **Rename is not a fix** — close the endpoint, don't rebrand the value.
 2. **One live surface** — every other vuln provably inert; ≥3 surfaces, exactly one scored.
 3. **Fail closed** — write a default reward before anything can abort.
 4. **Trace, don't trust** — read the source, not the note.
 5. **Capture evidence last, package from the shell** — any late source edit invalidates every trajectory.
+6. **Reconcile a behavior change across all ~8 artifacts in one pass** (all three tiers + `task.toml` +
+   solve + source + catalog/report-rubric + unintended/fresh_state); piecemeal = `tier_discoverability`/F4
+   fail.
+7. **The LLM-judge QC rows need an API key** — run the checker with one (or self-audit via `qc-audit-v4`)
+   before shipping; a local report with those rows `401`-skipped is not clean. And **normalize perms to
+   `755`/`644`** — a `700`/`600` tree makes the oracle fail to boot under the non-root agent.
