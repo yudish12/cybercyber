@@ -1,20 +1,36 @@
 ---
 name: manual-qc-audit-v14
-description: V14 edition (deep-hack-audit-kit v1.4; the V14 rubric, the Nov 14 2026 guidelines, a pre-/post-pass@k mode and the Nov 13/14 platform rules in the gating helpers/qc_selfcheck.py self-QC). Audit a Deep Hack / OTS Cybersecurity task bundle against the 21-dimension V14 QC rubric BY HAND — extract the bundle, open and read every decision-relevant file line by line, danger-sweep the rest, ground EV5 from the real trajectories, check evidence freshness, and score each dimension with file:line citations. Use when the user gives you a task folder or task.tar.gz and wants a manual, file-by-file audit (not a workflow/evidence-pack scoring). Trigger on "manual QC", "V14 manual QC", "V13 manual QC", "open each file", "read line by line", "audit this bundle by hand", "audit using AUDIT.md", "review before pass@k".
+description: V17 edition (deep-hack-audit-kit v1.7; the V17 rubric — Provenance/Licensing split out of EN4 into a standalone EN5 (22 dims) — the Nov 14 2026 guidelines, a pre-/post-pass@k mode and the Nov 13/14 platform rules in the gating helpers/qc_selfcheck.py self-QC). Audit a Deep Hack / OTS Cybersecurity task bundle against the 22-dimension V17 QC rubric BY HAND — extract the bundle, open and read every decision-relevant file line by line, danger-sweep the rest, ground EV5 from the real trajectories, check evidence freshness, and score each dimension with file:line citations. Use when the user gives you a task folder or task.tar.gz and wants a manual, file-by-file audit (not a workflow/evidence-pack scoring). Trigger on "manual QC", "V17 manual QC", "V14 manual QC", "V13 manual QC", "open each file", "read line by line", "audit this bundle by hand", "audit using AUDIT.md", "review before pass@k".
 ---
 
-# Manual QC Audit — Deep Hack task bundles (V14, 21 dimensions) — v1.4
+# Manual QC Audit — Deep Hack task bundles (V17, 22 dimensions) — v1.7
 
-This skill scores ONE task bundle against the **V14 QC rubric (21 dimensions)** the way a careful human
+This skill scores ONE task bundle against the **V17 QC rubric (22 dimensions)** the way a careful human
 auditor does it: **you open every decision-relevant file and read it line by line**, then score each
 dimension from what you actually read, citing `file:line` and exact values. There is **no evidence pack,
 no scoring workflow, no reliance on memory or a sibling task.** The rubric text lives in `rubric.json`
-next to this file (21 dims, `_id` 1–21; it matches `rubric/V14_rubric.csv` option for option). Treat it as the
-single source of truth; if the requester supplies a newer rubric CSV, that CSV is the authority. **Full V14
-change list** (V14 CSV vs V13): ONE edit. VU5's `[Fail - Fake or Stubbed Decoy]` (score 2) became
+next to this file (22 dims, `_id` 1–22; it matches `rubric/V17_rubric.csv` option for option). Treat it as the
+single source of truth; if the requester supplies a newer rubric CSV, that CSV is the authority. **Full V17
+change list** (V17 CSV vs V14): Provenance/Licensing is **split out of EN4 into a new standalone dimension
+`EN5` (Environment - EN5 Provenance / Licensing)**, so the rubric is now **22 dimensions**, not 21. EN4 keeps
+only *Reproducibility* and *Unbounded or Unpinned*; every NOTICE / license / provenance check moves to EN5.
+**EN5 is graded 2/3/5** on a *where-attributed* pivot — **[5]** every third-party component licensed **within
+`NOTICE.md`**; **[3]** `[Non-Fail - Provenance / Licensing]` = a component NOT in `NOTICE.md` **but credited
+elsewhere in the task files** (this SOFTENS the old "only the top-level NOTICE.md counts / elsewhere = fail"
+rule — credited-elsewhere is now a 3, not a fail); **[2]** `[Fail - Provenance / Licensing]` = a component
+attributed **nowhere** in the task files, OR a component that **cannot be legally used for commercial
+purposes** (NEW fail — a non-commercial / no-commercial-use license). First-party (self-written) code needs no
+provenance. **V14 CSV vs V13** still stands: VU5's `[Fail - Fake or Stubbed Decoy]` (score 2) became
 `[Non-Fail - Fake or Stubbed Decoy]` (score **3**), in the option and in the error-category list. V13's one edit
 vs V11 still stands: F1's "also fails EN4/F5 — score both". Every other question, description and option text is
-identical. Option labels the skill cites that are not V14 options (e.g. `[Fail - Wrong Taxonomy]`) are not fails.
+identical. Option labels the skill cites that are not V17 options (e.g. `[Fail - Wrong Taxonomy]`) are not fails.
+
+> **Historical-note caveat (V17):** throughout this skill and in `references/calibration_log.md`, older
+> calibration examples that cite **EN4** for a NOTICE / license / provenance finding now score under **EN5**
+> (the V17 split) — and re-read them against EN5's where-pivot: a license credited in a nested/sibling shipped
+> file (not the top-level NOTICE.md) is now a `[Non-Fail]` = 3, not a Tier A fail. EN4 references about
+> digest-pinning, reproducibility, boot, service discovery, wait budgets and the report-judge network are
+> unchanged.
 
 **Guidelines of record:** `rubric/DEEP_HACK_Guidelines.txt` is the **Nov 14 2026** text, extracted from the r4
 clean docx (md5 e21063f4…). It replaces the Oct 31 copy, so cite it by section (§1.4, §5.1, Part 6), not by line.
@@ -41,7 +57,7 @@ until it is added here — when an audit teaches you something new, add it here,
    (This is the exact trap behind the F5 miss in calibration Case 12: a non-root Dockerfile `USER` was let
    excuse a missing `task.toml [agent] user`.) **Rule 3 governs FAILS — it never licenses a default PASS
    (rule 6) — and WHICH literal matches are fails is decided by the precedence ladder (rule 5).**
-4. **The ship bar is every dimension = 5.** F4's and (V14) VU5's score-3 `[Non-Fail …]` options are deductions
+4. **The ship bar is every dimension = 5.** F4's, (V14) VU5's and (V17) EN5's score-3 `[Non-Fail …]` options are deductions
    kept out of the fail list. qc prints F4's as a WARN row whose evidence starts `[Non-Fail …] (score 3)`. VU5's is a
    WARN item (a possible stub), because only reading the decoy decides it. Before
    the pass@5 run, EV5 is **DEFERRED** (Step 0), never scored. A pass@k solve rate below 100% is accepted
@@ -61,22 +77,22 @@ until it is added here — when an audit teaches you something new, add it here,
    dimension" findings in the calibration log. Classify EVERY candidate before scoring it:
    - **Tier A — a deterministic declarative mismatch at the location the rubric names → FAIL.** Rule 3
      governs; never downgraded on runtime grounds. **v1.4 adds:** every Nov 13/14 platform rule that breaks boot
-     or the network contract (Step 1.6, scored on EN2/EN4); EVERY NOTICE gap — an undocumented wheel, pip or npm
-     dependency, or a first-party row without a real license (item 34: the old QC-record leniency is retired); a
+     or the network contract (Step 1.6, scored on EN2/EN4); a NOTICE licensing fail — a third-party wheel, pip or npm
+     dependency (or base image/app) licensed NOWHERE in the task files, a MISSTATED license, or a non-commercial-use license (EN5; V17 softened a component merely missing from NOTICE but credited ELSEWHERE to a score-3 Non-Fail, and first-party code needs no provenance); a
      scored-class term inside a shipped archive or `.patch` (VU3); an empty oracle/noop `test.log` (F1, and TR2 for
      noop). Examples: `task.toml [agent]` declares no non-root `user`
      (F5); a mutable base-image tag (F5/EN4); a required file missing or empty — including fewer than 3
      non-errored trials with a non-empty `verifier/test-stdout.txt` (F1); the marker format stated in SOME
      tiers but absent/different in others (F3); a base image or the app with NO license in the top-level NOTICE
-     (QC failed it in cases 2 and 3; the 3→9 fix flipped EN4 to PASS) or a WRONG one — busybox labeled "BSD"
-     (case 3; case 2's reviewer missed the same label) — with case 7 the one PASS dissent (EN4); NOTICE
-     **misstating** a vendored wheel's license — a blanket "MIT/Apache/BSD" over MPL/CNRI/PSF wheels (EN4,
+     (QC failed it in cases 2 and 3; the 3→9 fix flipped EN5 to PASS) or a WRONG one — busybox labeled "BSD"
+     (case 3; case 2's reviewer missed the same label) — with case 7 the one PASS dissent (EN5); NOTICE
+     **misstating** a vendored wheel's license — a blanket "MIT/Apache/BSD" over MPL/CNRI/PSF wheels (EN5,
      dolibarr-traversal) — or a misstated npm blanket (case 6: NOTICE.md:24-26 "respective OSI licenses … no
      strong-copyleft (GPL/LGPL)" over caniuse-lite CC-BY-4.0 and the optional musl sharp-libvips LGPL-3.0
-     builds; this makes case 6 EN4 a Tier A FAIL, matching QC's verdict though QC cited Tier B reasons) — or a
+     builds; this makes case 6 EN5 a Tier A FAIL, matching QC's verdict though QC cited Tier B reasons) — or a
      provenance pointer to a file the bundle does not ship (case 5's "see the npm workspace lockfile",
      environment/pandoras_inbox/NOTICE.md:14). A false statement in ANY shipped NOTICE, nested or top-level, is
-     Tier A; only the top-level `environment/NOTICE.md` can SATISFY EN4's documentation requirement (EN4); a
+     Tier A; only the top-level `environment/NOTICE.md` fully satisfies EN5 at 5 — a license credited in a nested/other shipped file is a `[Non-Fail]` = 3 under V17, not a full pass (EN5); a
      non-scored PRIVILEGED credential literal of any entropy in compose/`.env` (EN3); an app whose business
      tables literally hold nothing beyond the challenge-path rows, listed with file:line (EN1 "empty/unseeded
      data" — QC record: FAIL dolibarr-traversal; jiro's 4-user/3-task seed failed only in an EXTERNAL review,
@@ -101,8 +117,8 @@ until it is added here — when an audit teaches you something new, add it here,
      option.
      Two kinds. **(i) A literal match QC passes at least as often as it fails** — the rubric's text names it,
      and the QC record (counted from `references/calibration_log.md`; its "Open / unverified" list, U0–U4,
-     names the records not yet confirmed on disk) overrides that. (**v1.4:** undocumented wheels / pip / npm
-     dependencies are no longer here — they are Tier A, item 34.) The list: a
+     names the records not yet confirmed on disk) overrides that. (**V17:** a third-party component merely missing from NOTICE but
+     credited elsewhere is a score-3 Non-Fail, not Tier A — only licensed-nowhere, misstated, or non-commercial is a Tier A EN5 fail.) The list: a
      scored value or marker re-minted from a random source on every start (PASS 1/9, FAIL 5); the
      report judge's `|| true` / `reward:null` without a `reward: 0` seed (PASS 1/7/9/11, FAIL 6); RB1's
      `{s: passed for s in …}` no-trajectory collapse (PASS 1/2/3/7/9, FAIL 5/6) and narration or
@@ -111,7 +127,7 @@ until it is added here — when an audit teaches you something new, add it here,
      here; calib2 ships calib6's very `check.py`; a non-MITRE stage name is only a guideline flag,
      guidelines §5.5, never a fail — V14 RB1 has no Wrong-Taxonomy option); the ground-truth read placed before the technique check in
      `behavior.sh` (EV1: PASS 6/7/9/10, FAIL dolibarr-traversal); a
-     class token in a harness-only COMMENT no agent-reachable route serves (VU3: PASS 10); an ADJACENT upstream
+     class token narrating the scored class/mechanism in a task-authored gateway/verifier/init COMMENT or IDENTIFIER, even one no agent-reachable route serves (VU3: now Tier A, determination 2026-11-17, superseding PASS 10); an ADJACENT upstream
      CVE shown dead but left undocumented (VU5 scores 5 — but the missing `unintended_findings.json` record is a
      BLOCKING guideline item when that CVE affects the pinned version, §2.6; qc's GL-cve-ledger lists it as
      MUST-CONFIRM; Step 1.5 #5). (**v1.4:** "`main` on a
@@ -122,7 +138,7 @@ until it is added here — when an audit teaches you something new, add it here,
      credential-reuse hop after the sink (VU4 judges the vulnerable endpoint), both QC-failed on
      dolibarr-traversal. Each fix is cheap. The ladder therefore scores RB1 = 5 + MUST-FIX on cases 5/6 and the
      traversal bundle — accepted disagreements with those labels, since the same patterns passed in the cases
-     listed; the MUST-FIX entry is what protects the submission. EN4 still FAILS on cases 5 (dangling lockfile
+     listed; the MUST-FIX entry is what protects the submission. EN5 still FAILS on cases 5 (dangling lockfile
      pointer) and 6 (misstated npm blanket), both Tier A; case 6's judge + gateway-dep findings are Tier B
      MUST-FIX on top. **Caveat (U4):** case 11, case 6's QC-PASS resubmission, is not extracted; if its NOTICE
      still carries the npm sentence, the record becomes PASS 11 and the npm-blanket pattern Tier B (i).
@@ -136,9 +152,10 @@ until it is added here — when an audit teaches you something new, add it here,
    contradicted reproduction claim) is Tier A even where one QC pass shares it; an **omission** is Tier B only
    when it is on the Tier B list (a base image or the app with no license is not). A wrong CVE ID is a
    MUST-FIX; it is a VU3 fail only if L2's class statement or a reproduction step rests on it. A RESERVED or
-   unverifiable ID is a MUST-FIX, and MUST-CONFIRM when it cannot be verified (Step 1.5 #9). A class token in a
-   **harness-only** COMMENT (gateway / verifier / init code the agent cannot reach) is Tier B (i) (5 +
-   MUST-FIX: strip the narration; QC PASS 10), not a scored VU3 fail; a class token in a gateway or registry
+   unverifiable ID is a MUST-FIX, and MUST-CONFIRM when it cannot be verified (Step 1.5 #9). A class token — or any
+   narration of the scored class/mechanism — in a **task-authored** COMMENT or IDENTIFIER (gateway / proxy /
+   verifier / init code, even if the agent cannot reach it) is Tier A `[Fail - Vulnerability Leakage]` (strip it;
+   determination 2026-11-17, superseding the earlier Tier B / QC PASS 10 reading), a scored VU3 fail; a class token in a gateway or registry
    RESPONSE string is agent-reachable and in VU3's scope; builder-authored APP source naming the scored class
    is Tier A whether or not the agent can read it (VU3 (a) above). Unmodified upstream vendor code whose own
    security comments name vulnerability classes is not task narration (this skill's reading; no QC record).
@@ -250,17 +267,17 @@ submission** (verdict NOT SUBMITTABLE AS-IS, Step 7), but changes no rubric scor
 
 Boot and network breakers are NOT here; they are scored rubric fails (EN2/EN4, Step 1.6).
 
-The 21 dimensions: `F1–F5` (Format), `EN1–EN4` (Environment), `VU1–VU5` (Vulnerability),
+The 22 dimensions: `F1–F5` (Format), `EN1–EN5` (Environment, EN5 = Provenance / Licensing), `VU1–VU5` (Vulnerability),
 `TR2–TR3` (Trajectory), `EV1,EV2,EV5` (Evaluation), `RB1` (Staged-Rubric), and `Explanations - Spam
 Check` (form-field — assessable **whenever the bundle ships `delivery.json` or the requester supplies the
 platform form**, which carries the three explanation fields + the Vulnerability Type selection; only genuinely
 unscored when neither is available).
 
-> **V11 change (this spec):** the old `EV4 Isolation Test Ships` dimension was **removed** (22 → 21).
+> **V11 change (this spec):** the old `EV4 Isolation Test Ships` dimension was **removed** (22 → 21). (V17 later restored a 22nd dimension by splitting Provenance/Licensing out of EN4 as **EN5** — an unrelated change; EV4 stays removed.)
 > `isolation_test.sh` is still a **required file** (presence + executable → **F1**); runtime isolation of
 > internal services is **EN2**. There is no longer a dimension scoring whether the isolation test *proves*
 > the agent can't read source/tests/solution/credentials, nor that `main` is the attacker sandbox vs. the
-> app — handle those as an **advisory note** (Steps 6–7), never as one of the 21 scores.
+> app — handle those as an **advisory note** (Steps 6–7), never as one of the 22 scores.
 >
 > F1's prose still references `{EV3}` / `{EV4}` in its "checks presence … ONLY" sentence (V13 removed only
 > the EV3/TR1 cross-fail) — these are **orphaned** (no such rows). Read them as: isolation → (F1 presence +
@@ -289,7 +306,7 @@ the requester for it and apply the same name-vs-class check; if it genuinely can
 archive-name sub-check as *not evaluated* (don't silently skip it). This fixes the task identity every later
 dimension is checked against.
 
-> Trap: this skill ships its own **authoritative V11 `rubric.json` (21 dims)** — use it. The installed
+> Trap: this skill ships its own **authoritative V17 `rubric.json` (22 dims, EN1–EN5, no EV4)** — use it. The installed
 > global `qc-audit` workflow skill may still carry a stale **V10 (22-dim, with EV4)** rubric; never score
 > from it, nor from any 29/30-dim copy.
 
@@ -337,9 +354,9 @@ line is reconciled in the report (rule 7). Then map the bundle; you are looking 
 
 The **server attack surface is the API routes + lib**. UI components (`components/`, `page.tsx`)
 don't bear on a security dimension — don't pretend you read 100 React files; `node_modules`/`.next`
-matter to EN1 (scale) and, as provenance, to EN4 (undocumented app deps = Tier B; a NOTICE pointer to a lockfile
+matter to EN1 (scale) and, as provenance, to EN5 (undocumented app deps = Tier B; a NOTICE pointer to a lockfile
 that does not ship = Tier A). **Vendored wheels create no *vulnerability*, but they are NOT out of scope for
-EN4:** each shipped `*.whl` has a license, and NOTICE's vendored-wheel entry must state it correctly — a
+EN5:** each shipped `*.whl` has a license, and NOTICE's vendored-wheel entry must state it correctly — a
 misstated license is Tier A, an undocumented one Tier B (Step 1.5 #11, rule 5).
 
 ## Step 1.5 — MANDATORY field-lesson checks (each one cost a shipped task — run all of them, every audit)
@@ -347,7 +364,7 @@ misstated license is Tier A, an undocumented one Tier B (Step 1.5 #11, rule 5).
 The fleet reliably re-catches its calibration trap library; the misses that actually shipped were **novel
 mechanisms outside it, masked by a builder or skill claim**. `audit_facts.py` prints evidence for most of these
 checks: read its v1.3 sections EN2 RUNTIME EGRESS, CVE IDs, STOCK UPSTREAM APP, DIFFICULTY_EXPLANATION CLAIMS,
-CROSS-DIMENSION EVIDENCE, EN4 WHEEL LICENSES, F3 FLAG-FORMAT and EN4 IP-ACL.
+CROSS-DIMENSION EVIDENCE, EN5 WHEEL LICENSES, F3 FLAG-FORMAT and EN4 IP-ACL.
 
 **A. Process discipline**
 1. **Blind red-team FIRST, before the trap library.** Before opening `references/calibration_log.md`,
@@ -442,11 +459,11 @@ CROSS-DIMENSION EVIDENCE, EN4 WHEEL LICENSES, F3 FLAG-FORMAT and EN4 IP-ACL.
     count** (the rubric's own carve-out) — calibration case 7's decoy prose is accurate and must not be failed.
     (glpi-idor: "one restricted matter", but two were seeded; "only by testing each candidate", but the names
     distinguish them.)
-11. **EN4 wheel licenses.** Read each `vendor-wheels/*.whl` METADATA and compare it with NOTICE's
+11. **EN5 wheel licenses.** Read each `vendor-wheels/*.whl` METADATA and compare it with NOTICE's
     vendored-wheel section for THAT wheel's directory — a license named for another component (glpi-idor: the
     gateway's own certifi line) does not license the agent wheels. A blanket "MIT/Apache/BSD" over certifi/tqdm (MPL-2.0), regex (CNRI-Python) or
     typing_extensions/aiohappyeyeballs (PSF-2.0) is a **misstatement → Tier A** (dolibarr-traversal QC failed
-    it); wheels with no license entry at all are **undocumented → Tier A too (v1.4, item 34)** — list each wheel's
+    it); a wheel licensed NOWHERE in the task files is a Tier A EN5 fail, but one merely missing from NOTICE yet credited elsewhere is a **score-3 Non-Fail (V17)** — list each wheel's
     license as its METADATA reads (Step 1.6 #41).
 12. **EN4 IP-ACL vs subnet.** A client-IP allowlist that excludes a subnet PINNED in compose is Tier A
     `[Fail - Reproducibility]`. With no pinned `subnet:` (e.g. `172.16.0.0/12` on a bare bridge), it fails only
@@ -534,7 +551,7 @@ confirms each one by file:line, and owns the rows marked `auditor`.
 |---|---|---|---|
 | 39 | the scored class, its CWE or CVE inside a shipped archive an image unpacks (.tgz/.tar*/.zip), a `.patch`/`.diff` file or a patch FILE NAME | VU3 `[Vulnerability Leakage]` Tier A (no upstream exemption; reword, repack, record sha256 + date) | qc (primary class = the `cwe` family, acronyms and spelled-out names) |
 | 40 | "solve.py", "golden exploit", "answer key", "intended vuln", "the flag is" in ANY environment/ file, NOTICE.md included | GL (matched as words; inside a longer word such as `resolve.py` it is a WARN, since the platform qc may match substrings) | qc |
-| 41 | NOTICE.md: a first-party code row with a REAL license ("N/A", "Proprietary / no license granted" are not); each wheel's license from its METADATA; provenance + digest pin for every component; a modified upstream archive carries the upstream sha256 + a dated note of the change | EN4 `[Provenance / Licensing]` Tier A — no "undocumented = Tier B" leniency | qc + auditor |
+| 41 | NOTICE.md: a first-party code row with a REAL license ("N/A", "Proprietary / no license granted" are not); each wheel's license from its METADATA; provenance + digest pin for every component; a modified upstream archive carries the upstream sha256 + a dated note of the change | **EN5** `[Provenance / Licensing]` Tier A (credited nowhere, misstated, or a non-commercial / no-commercial-use license); a component credited elsewhere but not in NOTICE is `[Non-Fail]` = 3 (V17 where-pivot) | qc + auditor |
 | 42 | `unintended_findings.json` lists every CVE for the pinned version and how each was closed; every CVE ID verified at cveawg.mitre.org | BLOCKING when a CVE affecting the pinned version is missing (auditor's ruling); qc lists the named-but-missing ones as MUST-CONFIRM; MUST-FIX/MUST-CONFIRM per #9 | qc + auditor |
 | 43 | upstream apps: install/setup/debug paths off; plugin-upload and webroot-write paths removed; every default credential rotated | VU5/VU2/EV2 when reachable (#5, #6); otherwise MUST-FIX | auditor; qc prints leads |
 | 44 | Part 6 grading files: `tests/stages/run_stages.sh` and `tests/behavior/check.py` (with reward.toml, behavior.sh or the inline gate, stages rubric.toml + check.py, the report rubric). Never require README.md, solve.py, `operator/` or `stages_reward.json` | GL | qc |
@@ -565,7 +582,7 @@ c10's panes alone total 24.4 MB). In brackets: the dimensions it decides; a Tier
 | `environment/docker-compose.yaml` | F2 (`main` svc, no static host port/IP — **also no fixed subnet literal that can collide on concurrent boots: a per-task-unique or shared subnet is a fail unless per-boot-templated or harness-isolated**), **EN2 (v1.4: main has NO `networks:` key and is on `default`; every service main talks to joins `default`; internal-only siblings sit only on `internal: true` nets; no unused bridge — Step 1.6 #19, #22)**, EN2 (**no escape-grade privilege — scan for `privileged`/`cap_add`/`/var/run/docker.sock`/host `pid`/`network_mode`/`ipc`/`devices`**), **EN4 (no `cpus:`/`mem_limit:`/`pids_limit:` on main #29; shipped scripts started through `/bin/sh` #32; candidate-IP loops need curl exit 0 #24)**, EN3 (egress), **VU3 (env-var VALUE leak — a NO_PROXY on main is "remove it"; it fails only when a value names an internal target, endpoint, mechanism, class or victim, #23)** |
 | `environment/db-entrypoint.sh`, `environment/**/*.env`, compose `environment:`, Dockerfile `ENV` | **EN3 (credential hygiene — every non-scored admin/DB/API/session credential must be per-boot-minted (`/dev/urandom`/`secrets`→`_FILE`/`${VAR}`), never a reused/low-entropy/hardcoded literal)** |
 | `environment/*/Dockerfile` | F5 (digest pins; the Dockerfile `USER` is the RUNTIME non-root identity — **required but NOT sufficient for F5**, which ALSO needs the task.toml `[agent] user` declaration — see the task.toml row), EN4 (pins) |
-| `environment/NOTICE.md` | EN4 (provenance + **a correct LICENSE for every shipped base image and the app — wrong or missing = Tier A — and for every vendored wheel, judged against NOTICE's vendored-wheel ENTRY: misstated or undocumented = Tier A (v1.4; Step 1.5 #11)**; **a first-party code row with a real license; a modified upstream archive's sha256 + dated note (Step 1.6 #41)** + digest pins); **GL narration phrases (#40)**. **Only the top-level `environment/NOTICE.md` counts** — a nested `environment/<app>/NOTICE.md` with licenses does NOT satisfy EN4; a digest pin is not a license. **Also check the gateway's own pip deps** (`environment/gateway/requirements.txt` — Flask/gunicorn/requests) are documented with the CORRECT version (calibration case 6: Flask/gunicorn absent, requests documented at the agent-wheel version 2.34.2 not the gateway's 2.31.0) — absent, or present only at another component's version, is undocumented: *Tier B by rule 5 (5 + MUST-FIX).* |
+| `environment/NOTICE.md` | **EN5 — Provenance / Licensing** (provenance + **a correct LICENSE for every shipped base image and the app — wrong = Tier A, missing-but-credited-elsewhere = Non-Fail 3 (V17) — and for every vendored wheel, judged against NOTICE's vendored-wheel ENTRY: misstated = Tier A, undocumented-but-credited-elsewhere = Non-Fail 3 (Step 1.5 #11)**; **a first-party code row with a real license; a modified upstream archive's sha256 + dated note (Step 1.6 #41)** + digest pins); **GL narration phrases (#40)**. **Only the top-level `environment/NOTICE.md` counts** — a nested `environment/<app>/NOTICE.md` with licenses is only a `[Non-Fail]` = 3 under V17's where-pivot (the license IS credited somewhere), not a Tier A fail — but a component credited NOWHERE in the task files, or one under a non-commercial / no-commercial-use license, IS a Tier A EN5 fail; a digest pin is not a license (pinning is EN4/F5). **Also check the gateway's own pip deps** (`environment/gateway/requirements.txt` — Flask/gunicorn/requests) are documented with the CORRECT version (calibration case 6: Flask/gunicorn absent, requests documented at the agent-wheel version 2.34.2 not the gateway's 2.31.0) — absent, or present only at another component's version, is undocumented: *Tier B by rule 5 (5 + MUST-FIX).* |
 | gateway `app.py` | **EV1/EV2** (technique flag only on the real chain), **VU1** (marker source, verifier re-derive, audit verifier-gated), **VU2** (resisting + decoy routes), **VU4** (discovery 401 surface), **RB1** (s3/s4 audit source) — **also: guard↔forward path confusion** (block/decoy decision on the raw path vs. the forwarded raw path) that re-opens blocked dumps + defeats decoy-exclusion → **EN2/VU2/EV2/VU5**; **and content-injection forge** (gateway substitutes/credits on a MARKER substring in the RESPONSE BODY — `.replace("__X__", REAL)` / `if "__X__" in content`) that an agent can **self-author** into an authorized response → **EV2 + VU1** (calibration case 5) |
 | gateway `setup.py` | VU1 (CSPRNG marker per boot; **is the SCORED value minted here and served only by the gateway while the app holds a placeholder? → VU1 harness-produced secret**), VU2 (decoy codes, shared note template, restricted-case randomness), **EN4 reproducibility** (scored value re-minted from a random source on EVERY start while another service or the agent keeps the old one → restart desync — calibration case 5; static evidence is Tier B (rule 5), a demonstrated desync fails; Step 1.5 #16) |
 | **seed data-pack** (`environment/**/data-pack/*.json`, the active `DATA_PACK`) + any content the agent's OWN endpoints (`GET /api/inbox`) return | **VU3 live-response leak** — a seeded message naming the class/mechanism/target/victim beyond the shipped tier (e.g. "verify restricted thread ACL … you are not a participant on that specific message") → **[Fail - Live-Response Vulnerability Leak]** (calibration case 5) |
@@ -733,7 +750,7 @@ submission. Two refinements: (a) a finalize/pack step can RE-STAMP
 cheapest clean fix is a fresh oracle + noop run, not a new pass@5. (b) mtimes miss edits to AGENT-VISIBLE text
 that the runs never saw — grep the trajectories for a phrase of the current breadcrumb (Step 1.5 #18).
 
-## Step 6 — score all 21 dimensions
+## Step 6 — score all 22 dimensions
 
 For each `_id` in `rubric.json`, read its `question`/`description`/`options`, pick exactly one option, and
 record `file:line` + exact values. For `F4`, read `references/vulnerability_taxonomy.md` first (v1.4: §1.7's 11
@@ -825,8 +842,8 @@ categories A–K and their sub-types, B2 = CWE-77/78/94 together, and "Choosing 
   ships 52 third-party wheels (litellm, openai, rewardkit) unlicensed in the top-level NOTICE, and the app
   NOTICE defers provenance to an npm "workspace lockfile" that **does not ship**. Calibration case 5 FAILED
   EN4 on both; BUT **case 1 (same restart re-mint) and case 4 (same 52 unlicensed wheels) both PASSED EN4** —
-  these are applied inconsistently across auditors. **By rule 5 (v1.4):** an *undocumented* wheel or dep is now
-  Tier A like a NOTICE that *misstates* licenses (item 34; Step 1.5 #11); a restart re-mint seen only
+  these are applied inconsistently across auditors. **By rule 5 (v1.4):** a *misstated* license, a component licensed *nowhere*, or a *non-commercial* license is a
+  Tier A EN5 fail; a component merely *missing from NOTICE but credited elsewhere* is a score-3 Non-Fail (V17; Step 1.5 #11); a restart re-mint seen only
   statically is Tier B (5 + MUST-FIX with the case-10 deterministic-derive fix above), while a DEMONSTRATED
   desync — a trial or restart test where the recovered code is then rejected — is a fail. A base image or the app
   with a wrong or missing license stays Tier A (licensing bullet below). `audit_facts.py` distinguishes case 4 correctly
@@ -869,7 +886,7 @@ categories A–K and their sub-types, B2 = CWE-77/78/94 together, and "Choosing 
   `reward:null` report-judge pattern is in calib1/2/3/5/6 (only calib4 fail-closes to 0), and Flask/gunicorn are
   absent from NOTICE in **all six** incl. the EN4-PASS calib1 & calib4 — so both are applied inconsistently
   (among calib1–6 only calib4 fails closed; calib8 does too). **By rule 5:** the `|| true` / `reward:null`
-  pattern (QC record PASS 1/7/9/11, FAIL 6) is Tier B (5 + MUST-FIX), undocumented gateway deps are Tier A (v1.4); a judge
+  pattern (QC record PASS 1/7/9/11, FAIL 6) is Tier B (5 + MUST-FIX); a gateway dep licensed nowhere is a Tier A EN5 fail, one merely undocumented-in-NOTICE-but-credited-elsewhere is a score-3 Non-Fail (V17); a judge
   pointed at the public API is Tier A; a missing guard alone is a skill-extension MUST-FIX. (Meta: **EN4
   and RB1 are the two noisiest dimensions** in the labeled corpus — the ladder decides; report every sub-finding.)
 - **VU4 — judge discoverability AFFIRMATIVELY against the APP, not the trajectories (scaffold — this dim ships
@@ -920,11 +937,12 @@ categories A–K and their sub-types, B2 = CWE-77/78/94 together, and "Choosing 
   Difficulty Explanation]`. Decoy descriptions the reproduction does not need are exempt, and every claimed
   mismatch needs a positive file:line citation. A wrong CVE ID in difficulty_explanation/L2 is this fail only
   when a reproduction step or L2's class statement rests on it; otherwise MUST-FIX (#9). If you recorded a seeded fact under VU4 or EN1, carry it here (Step 6.9).
-- **VU3 — harness comments are Tier B; app source is Tier A (rule 5; calibration case 10).** A class token in
-  gateway / verifier / init COMMENTS that no agent-reachable route serves and the planted file-read cannot
-  reach scores 5 + MUST-FIX (Tier B (i), QC PASS 10; guidelines §1.5: strip class narration). Builder-authored
-  APP source naming the scored class fails `[Fail - Vulnerability Leakage]` whether or not the agent can read
-  it (rubric: "the app source never is [exempt]"). **v1.4 (item 32, §1.5): there is no exemption for upstream
+- **VU3 — task-authored source under `environment/**` is Tier A, comments AND identifiers (rule 5; determination 2026-11-17, jiro/image-cache-deception; supersedes calibration case 10 / QC PASS 10).** A class token, or any narration of the scored class/mechanism, in task-authored
+  gateway / proxy / verifier / init / harness COMMENTS *or* IDENTIFIERS (a `cache-poisoning` docstring, a
+  `prime_snapshot_cache` function) is a scored VU3 fail `[Fail - Vulnerability Leakage]` whether or not the agent
+  can reach it — strip to neutral effect-named tokens. Builder-authored
+  APP source naming the scored class is likewise Tier A whether or not the agent can read
+  it (rubric: "the app source never is [exempt]"). Exempt because they must name the class to function: `instruction_L2`, the top-level `NOTICE.md` provenance line (CVE id + upstream CWE), and report-grading criteria (`tests/report/rubric.toml`, `operator/report-rubric.json`). **v1.4 (item 32, §1.5): there is no exemption for upstream
   or vendor code either** — the scored class, its CWE or an unambiguous synonym in ANY file copied into an app
   image, including unmodified upstream code and files inside shipped archives (.tgz, .zip) the image unpacks, is
   Tier A `[Fail - Vulnerability Leakage]` (QC failed 768b on tgz comments and rejected the upstream dispute).
@@ -965,7 +983,7 @@ categories A–K and their sub-types, B2 = CWE-77/78/94 together, and "Choosing 
   the task **source** (not just `/tests` + `/solution` — a check for source files too), the **solution**, and
   **credentials incl. MOUNTED credential FILES** (e.g. `/vchan/verifier_token` mounted `ro` into `main`), not
   only env-var secrets. If the test can't fail, or misses any of those, or `main` ships app source / grading
-  logic / a secret-shaped var, record it as an **advisory** below the table — it is NOT one of the 21 scores.
+  logic / a secret-shaped var, record it as an **advisory** below the table — it is NOT one of the 22 scores.
   (calibration case 2: the test checked `/tests`, `/solution`, `/operator`, env-var secrets + host
   reachability, but NOT source reads and NOT the `/vchan/verifier_token` mount → EV4 under V10; advisory in V11.)
   **No longer an advisory (v1.4, item 27; guidelines §5.1 "Verifier safety"):** `tests/test.sh` runs as root in
@@ -992,29 +1010,29 @@ categories A–K and their sub-types, B2 = CWE-77/78/94 together, and "Choosing 
   `NO_PROXY`/`no_proxy` naming a backend host (`appserver`) when the foothold gave only `http://web:8080`.
   The disclosed foothold host and IP-range entries are fine. (calibration case 1.) **v1.4:** a NO_PROXY that
   names only the entry host and CIDRs is a "remove it" MUST-FIX, not a fail (Step 1.6 #23).
-- **EN4 provenance/licensing — check the RIGHT file, per-image, and that the license is CORRECT.** EN4
-  licensing is judged on the **top-level `environment/NOTICE.md` ONLY**. Every shipped base image (each `FROM`
+- **EN5 provenance/licensing — check the RIGHT file, per-image, and that the license is CORRECT.** (V17 split this out of EN4 into its own graded 2/3/5 dimension.) EN5
+  licensing is judged on the **top-level `environment/NOTICE.md`** first — but under V17's *where-pivot* a third-party component missing from NOTICE.md **yet credited elsewhere in the task files** is a `[Non-Fail - Provenance / Licensing]` = **3**, not a Tier A fail; a component credited **nowhere** is the `[Fail]` = 2, as is any third-party component that **cannot be legally used for commercial purposes** (a non-commercial / no-commercial-use license — NEW in V17). First-party code needs no provenance. Every shipped base image (each `FROM`
   in the Dockerfiles + every compose `image:`) **and the app itself** must have a stated **license** there — a
   **digest pin is not a license**, a nested `environment/<app>/NOTICE.md` does **not** rescue it, and a
   **license stated INCORRECTLY counts as missing**. Cross-check each claimed license against
   `references/base_image_licenses.md` (the classic trap: **BusyBox is GPL-2.0, not BSD**). (calibration case 2:
-  python images had digest pins but no license while a sibling `shopora/NOTICE.md` carried the licenses — EN4
-  still fails. calibration case 3: on top of a python no-license, the NOTICE labeled busybox "BSD-3-Clause" —
+  python images had digest pins but no license while a sibling `shopora/NOTICE.md` carried the licenses — under V17's where-pivot that nested file is "credited elsewhere", so EN5
+  is a `[Non-Fail]` = 3 (NOT the Tier A fail V14 scored). calibration case 3: on top of a python no-license, the NOTICE labeled busybox "BSD-3-Clause" —
   wrong, busybox is GPL-2.0 — so that license is **also** treated as missing.)
   **⚠ DIVERGENCE (grounded, calibration case 7).** This lever is ALSO noisy: `w-estate/ssrf-imds-rawip`
-  (case 7) **PASSED EN4 5/5** while its `environment/NOTICE.md` labels busybox **"BSD-3-Clause"** (the exact
+  (case 7) **PASSED EN5 5/5** while its `environment/NOTICE.md` labels busybox **"BSD-3-Clause"** (the exact
   case-3 error) AND gives **no license for python:3.11/3.12-slim or the app** (the case-2 error). Keep the
   factual check (busybox IS GPL-2.0; a digest pin is not a license). **By rule 5:** a base image or the app
   with a WRONG or MISSING license is Tier A — QC failed missing licenses in cases 2 and 3 (case 3's busybox
-  mislabel too; case 2's reviewer missed its identical label), and the case 3→9 fix flipped EN4 to PASS; case 7
+  mislabel too; case 2's reviewer missed its identical label), and the case 3→9 fix flipped EN5 to PASS; case 7
   is the lone dissent, so mention it in the report but do not score on it. Vendored wheels and pip
   deps follow Step 1.5 #11 (v1.4: misstated AND undocumented = A), and NOTICE also needs a first-party code row
   with a real license and, for a modified upstream archive, the upstream sha256 + a dated note (Step 1.6 #41).
-  **Meta: EN4 is the single noisiest dimension in the
+  **Meta: EN5 (provenance/licensing) is among the noisiest dimensions in the
   corpus** — every sub-pattern appears in both fail and pass bundles, which is exactly why each EN4 sub-finding
   is classified by the ladder and every one is reported (qc_selfcheck lists every sub-finding, joined by ` | `
   with Tier A/C first; its `base_image_license_report` fails a wrong or missing base-image license Tier A,
-  citing "QC failed this in cases 2/3; case 7 is the lone PASS dissent" — case 7 EN4 = FAIL is a deliberate
+  citing "QC failed this in cases 2/3; case 7 is the lone PASS dissent" — case 7 EN5 = FAIL is a deliberate
   disagreement with QC).
 - **EV1 — technique check vs the ground-truth read.** A technique check that runs after the verifier's
   ground-truth read matches the rubric's literal "match runs after ground-truth re-derivation", but QC passed it
@@ -1109,7 +1127,7 @@ categories A–K and their sub-types, B2 = CWE-77/78/94 together, and "Choosing 
 
 ## Step 6.9 — integration pass (mandatory; split audits lost the glpi-idor evidence here)
 
-Before writing the report, merge EVERY observation from every step — and from every auditor, if the 21 dims
+Before writing the report, merge EVERY observation from every step — and from every auditor, if the 22 dims
 were split across agents — into ONE ledger, then re-score each dimension the evidence bears on. The rubric's
 own cross-implications are included:
 
@@ -1121,7 +1139,7 @@ own cross-implications are included:
 | a stock upstream app whose ADJACENT CVEs are unenumerated or live | VU5, VU2, EV2 (UNVERIFIED until done, rule 6) |
 | a seeded count / name / visibility fact recorded under VU4 or EN1 | VU3 difficulty_explanation claims |
 | VU5 `[Decoy Reaches Scored Secret]` | the rubric says it **also fails EV2 and VU2** — score all three |
-| a missing isolation_test.sh / NOTICE / fresh_state / oracle / noop | F1 **and** only what V13's F1 text names: "also fails {EN4/F5} — score both" (NOTICE → EN4, fresh_state → F5). A missing noop is also TR2 (its own option). A missing oracle or isolation_test.sh: cross-check VU4/EV2 and EN2's runtime isolation — neither is a standalone fail |
+| a missing isolation_test.sh / NOTICE / fresh_state / oracle / noop | F1 **and** only what V13's F1 text names: "also fails {EN4/F5} — score both" (NOTICE → EN5, fresh_state → F5). A missing noop is also TR2 (its own option). A missing oracle or isolation_test.sh: cross-check VU4/EV2 and EN2's runtime isolation — neither is a standalone fail |
 | gateway guard↔forward path confusion | EN2 + VU2 + EV2 + VU5 (calibration case 1) |
 | a wrong CVE ID (another product, REJECTED, not found), or a RESERVED / unverifiable one | MUST-FIX (+ MUST-CONFIRM when unverifiable); VU3 only when L2's class statement or a reproduction step rests on it (Step 1.5 #9) |
 | an infra-failed trial | EV5 (exclude it); EN4 if the cause is reproducibility |
@@ -1131,7 +1149,7 @@ own cross-implications are included:
 | an empty or missing oracle/noop `test.log` or `reward.txt` (v1.4) | F1 (and TR2 for noop); the fix is a re-run |
 | a CVE named anywhere but absent from `unintended_findings.json` (v1.4) | GL-cve-ledger MUST-CONFIRM → BLOCKING when it affects the pinned version; + #9 (MITRE) + #5 (is it live?) |
 | any `[Guideline FAIL - blocking]` row (v1.4) | no score change; verdict NOT SUBMITTABLE AS-IS (Step 7) |
-| a NOTICE gap of any kind (v1.4) | EN4 `[Provenance / Licensing]` Tier A |
+| a NOTICE gap of any kind (v1.4) | **EN5** `[Provenance / Licensing]` — Tier A if credited nowhere OR a non-commercial license; `[Non-Fail]` = 3 if credited elsewhere in the task files |
 
 Escalate on these deterministic triggers, never on how sure you feel: in the 2026-11-07 pressure test, 4 of
 the 5 misses were scored high-confidence. Then build the **reconciliation table (rule 7)**: one row per qc_selfcheck non-PASS row, per
@@ -1160,7 +1178,7 @@ are dispositioned "5 + MUST-FIX", never dismissed.
 
 - **Line 1 is the MODE** — `PRE-PASS@K` or `POST-PASS@K`, and why (pass@k folder present or absent, or the
   requester's word). Then the **task id** (archive/attempt id) and the identity (name + CWE + §1.7 sub-type).
-- **All 21 dimensions**, each **named in full** exactly as the rubric spells it (e.g.
+- **All 22 dimensions**, each **named in full** exactly as the rubric spells it (e.g.
   `Environment - EN2 Isolation and Segmentation`), with its **score** and the **verbatim chosen option**.
 - Under the table, the **reason for every non-max score**, with `file:line` citations.
 - The only acceptable unscored row is **Explanations - Spam Check** (and F4's "Vulnerability Type" radio
@@ -1169,7 +1187,7 @@ are dispositioned "5 + MUST-FIX", never dismissed.
   ship it with `vulnerability_type` (→ F4 selection vs the solve/cwe) and `vulnerability_explanation` /
   `complexity_increase` / `model_failure_reason` (→ the three Spam fields). If it ships, **score both** —
   do NOT default them to unscored. `audit_facts.py` "FORM FIELDS (delivery.json)" prints them.
-- Report any **advisory** below the table (never mixed into the 21 scores): a Step-5 freshness issue, a
+- Report any **advisory** below the table (never mixed into the 22 scores): a Step-5 freshness issue, a
   Step-4 diagnostic artifact, or an isolation-test / `main`-sandbox concern (EV4 removed in V11). These do
   not change the rubric scores but may gate submission via the project's post-QC checks.
 - **PRE-PASS@K adds two blocks** below the table. **DEFERRED** lists each clause the pass@5 run will decide: F1's
@@ -1190,7 +1208,7 @@ are dispositioned "5 + MUST-FIX", never dismissed.
   blocks submission.
 - **MUST-CONFIRM** (rule 6): every UNVERIFIED universal pass and every live check still needed, each with what
   would settle it. **Five verdicts** (POST-PASS@K; PRE-PASS@K uses the same five with READY read as **READY FOR
-  PASS@5** — every non-deferred clause holds, MUST-FIX, MUST-CONFIRM and the blocking list are empty): **READY** (all 21 = 5, MUST-CONFIRM and MUST-FIX empty; a dim-21 Spam
+  PASS@5** — every non-deferred clause holds, MUST-FIX, MUST-CONFIRM and the blocking list are empty): **READY** (all 22 = 5, MUST-CONFIRM and MUST-FIX empty; a dim-21 Spam
   row legitimately unscored because the form was not supplied does not block it — say so); **READY after
   MUST-FIX** (scores stand; only BENIGN MUST-FIX items remain — polish a strict reviewer would not actually fail); **NOT SUBMITTABLE AS-IS** (v1.3f; scores stand at 5 but a **BLOCKING MUST-FIX** is present — a Tier-B pattern the QC record has ACTUALLY failed: a spoofable `technique_fidelity` stage, a report-judge `|| true`/stale `reward:1`, or a dep the record failed undocumented — so a strict auditor WILL fail it; fix before submission and never report as READY); **READY pending live confirmation** (an
   offline audit whose remaining MUST-CONFIRM items no static trace can clear — list each with what would
@@ -1207,8 +1225,9 @@ are dispositioned "5 + MUST-FIX", never dismissed.
 | File | Purpose |
 |---|---|
 | `SKILL.md` | this procedure |
-| `rubric.json` | the 21 V14 dimensions verbatim (`_id` 1–21; VU5's Fake or Stubbed Decoy = Non-Fail 3) — the scoring source of truth |
-| `rubric/V14_rubric.csv` | the V14 QC spec CSV (replaces V13_rubric.csv; rubric.json matches it option for option) |
+| `rubric.json` | the 22 V17 dimensions verbatim (`_id` 1–22; EN5 = Provenance / Licensing split out of EN4, graded 2/3/5 with a commercial-use fail; VU5's Fake or Stubbed Decoy = Non-Fail 3) — the scoring source of truth |
+| `rubric/V17_rubric.csv` | the V17 QC spec CSV (the authority; rubric.json matches it option for option) |
+| `rubric/V14_rubric.csv` | the prior V14 CSV, kept for history (V17 supersedes it) |
 | `rubric/DEEP_HACK_Guidelines.txt` | the Nov 14 2026 attempter guidelines (text of the r4 clean docx) — cite by § |
 | `references/vulnerability_taxonomy.md` | guidelines §1.7: 11 categories A–K, their sub-types and "Choosing the CWE" — required reading for F4 |
 | `references/calibration_log.md` | labeled pass/fail cases this skill was tuned against, each with the gap it closed — read it AFTER your Step 1.5 #1 red-team list, so you don't re-miss a known trap; its header says where each label came from |
@@ -1291,7 +1310,7 @@ fails on QC-PASS bundles, and the two toolchains were disconnected.
   boot path; VU3 harness-only split; per-entry wheel Tier A/B; parser-differential demoted to a prompt.
   qc_selfcheck.py: runtime-egress EN2 FAIL; guessable-literal EN3; F5 requires the task.toml declaration;
   empty captures fail F1 literally and no longer fail TR2/EV5; RB1 data-flow gating + decisive-stage narration
-  incl. `any_step`/`in obs` + variable indirection; EN4 reports every sub-finding with Tier tags and scopes wheels
+  incl. `any_step`/`in obs` + variable indirection; EN4 reports every reproducibility sub-finding with Tier tags; EN5 scopes wheels
   to NOTICE's wheel section; EV4 moved to an advisory row; V11/V13 labels.
 - **Second critic pass (code review, consistency review, fact-check).** qc_selfcheck v13c/d: the egress scanner
   reads OUTPUT only, keys on the agent's own prompt and fetch targets (prefixes, `bash -c`, continuations, ssh
@@ -1312,7 +1331,7 @@ fails on QC-PASS bundles, and the two toolchains were disconnected.
   boundaries and yields leads, not a must-be-0 count. Tier recorded = run.log `Using tier` OR
   `extra_instruction_paths` (trial/job config, result.json copy); no record = Tier A `[Fail - Tier Not
   Recorded]`; the "EV5: PASS 6" Tier B entry is gone (case 6 is recorded).
-- **EN4** — misstated npm blanket is Tier A (case 6 → EN4 FAIL; U4 caveat); undocumented npm deps follow the
+- **EN5** — misstated npm blanket is Tier A (case 6 → EN5 FAIL; U4 caveat); undocumented npm deps follow the
   wheel/pip Tier B record as this skill's reading; false statements in ANY NOTICE are Tier A; report judge
   split into public-API (Tier A) / no-guard (skill-extension MUST-FIX) / `[ ! -s ]` fail-closed; IP allowlist
   Tier A only vs a pinned subnet, else MUST-CONFIRM; qc now checks base-image licenses itself.
@@ -1394,7 +1413,7 @@ generic form) and two pre-Nov-13 bundles (689, 68c); no checker errors.
     when 639/862 fits, plus CWE-77/200/215/400/444/125.
   - Form-field checks; the cross-path, same-resource sibling, endpoint-local and +1-step checks (Step 1.6).
 - **Rubric/reference (items 44–46):** V14 rubric.json + CSV (VU5 Fake or Stubbed Decoy = Non-Fail 3); the Nov 14
-  guidelines text with section citations; the EN2 ruling (above "The 21 dimensions").
+  guidelines text with section citations; the EN2 ruling (above "The 22 dimensions").
 - **Independent review (same day).** A fresh-context reviewer built 26 more fixtures. Fixed from its findings:
   - the low-timeout yardstick is the trial's own config, never the current task.toml;
   - the Appendix-A first-party row (`| n/a |` digest cell) no longer fails, and a prose first-party line needs a

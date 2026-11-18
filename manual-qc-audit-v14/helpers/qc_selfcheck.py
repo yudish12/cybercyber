@@ -3,7 +3,7 @@
 """
 qc_selfcheck.py  --  READ-ONLY pre-submission self-QC checker for "Deep Hack" tasks.
 
-Covers every row of the V14 QC rubric (21 scored rows) plus the guideline / platform-rule
+Covers every row of the V17 QC rubric (22 scored rows) plus the guideline / platform-rule
 checks of the Nov 14 guidelines, so a builder can see, before submission, which rubric rows
 pass statically, which still need a live Docker boot, and which need a submission-form
 field -- and never trip a surprise QC fail.
@@ -6490,111 +6490,7 @@ def check_EN4(ctx):
         _fail(TIER_A, "unpinned base image(s): %s" % unpinned,
               "[Fail - Unbounded or Unpinned] base image uses a mutable tag")
 
-    notice = _en4_notice_text(ctx)
-    build_digests = set()
-    for df in ctx.walk("environment"):
-        if os.path.basename(df) == "Dockerfile":
-            build_digests |= set(re.findall(r'sha256:[0-9a-f]{64}', ctx.read_abs(df) or ""))
-    data, cpath, _ = ctx.compose()
-    build_digests |= set(re.findall(r'sha256:[0-9a-f]{64}', ctx.read_abs(cpath) or "" if cpath else ""))
-    notice_digests = set(re.findall(r'sha256:[0-9a-f]{64}', notice))
-    missing_dig = build_digests - notice_digests
-    has_license = bool(re.search(
-        r'(?i)licen[sc]e|copyright|\(c\)\s|©|\b(MIT|BSD(?:-[0-9](?:-Clause)?)?|Apache(?:[ -]?2(?:\.0)?)?|'
-        r'[AL]?GPL(?:[ -]?v?[23](?:\.0)?)?|MPL(?:[ -]?2\.0)?|ISC|Unlicense|CC0|Zlib|BSL|PSF|WTFPL)\b', notice))
-    if not has_license:
-        _fail(TIER_A, "NOTICE.md names no license (no license/copyright word and no SPDX id)",
-              "[Fail - Provenance / Licensing] NOTICE lacks a license mention")
-    if missing_dig:
-        _fail(TIER_A, "build digest(s) absent from NOTICE.md: %s" % sorted(missing_dig),
-              "[Fail - Provenance / Licensing] build digest missing from NOTICE")
-    # V13e (#9): every base image needs a CORRECT license in the top-level NOTICE (references/base_image_licenses.md)
-    try:
-        _bil = base_image_license_report(ctx)
-    except Exception as e:  # pragma: no cover -- degrade to a WARN, never mask the rest of the row
-        _bil = []
-        warn.append("EN4: base-image license check errored (%r) -- check each image's NOTICE line by hand" % e)
-    _bad_img = [r for r in _bil if r["status"] in ("wrong", "missing")]
-    if _bad_img:
-        _fail(TIER_A, "base-image license WRONG or MISSING in environment/NOTICE.md: %s -- QC failed this in cases 2/3; "
-              "case 7 is the lone PASS dissent" % ["%s: %s %s (expected %s; %s)" % (r["image"], r["status"].upper(),
-                                                   r["notice_says"], r["expected"], r["where"].split(", ")[0])
-                                                   for r in _bad_img[:6]],
-              "[Fail - Provenance / Licensing] base-image license wrong or missing in NOTICE")
-    _SKIP_PKG = {"pytest", "pytest-asyncio", "pytest-cov", "faker", "mock", "coverage", "tox",
-                 "flake8", "black", "mypy", "ruff", "pylint", "isort"}
-    undoc, seen_nm = [], set()
-    for _dp, _dn, _fns in os.walk(ctx.p("environment")):
-        if "requirements.txt" not in _fns:
-            continue
-        for ln in (ctx.read_abs(os.path.join(_dp, "requirements.txt")) or "").splitlines():
-            ln = ln.strip()
-            if not ln or ln.startswith(("#", "-")):
-                continue
-            nm = re.split(r'[\[<>=!~;\s]', ln, maxsplit=1)[0].strip().lower()
-            if not nm or nm in _SKIP_PKG or nm in seen_nm:
-                continue
-            if not any(v in notice.lower() for v in (nm, nm.replace("-", "_"), nm.replace("_", "-"))):
-                seen_nm.add(nm)
-                undoc.append((os.path.relpath(os.path.join(_dp, "requirements.txt"), ctx.task), nm))
-    if undoc:
-        # v14 (item 34): every shipped component needs provenance + license in NOTICE.md -- an undocumented dependency is
-        # a fail now (Tier A); v13e kept it Tier B on the QC record (PASS 1/4/7/8/9, FAIL 6)
-        _fail(TIER_A, "NOTICE.md omits provenance/licensing for shipped pip dependencies: %s (guidelines §1.6)"
-              % ["%s:%s" % (r, n) for r, n in undoc[:6]],
-              "[Fail - Provenance / Licensing] shipped dependency undocumented in NOTICE")
-    w_mis, w_undoc = _wheel_license_findings(ctx, notice)
-    if w_mis:
-        _fail(TIER_A, "NOTICE MISSTATES vendored-wheel licenses: %s" % w_mis[:6],
-              "[Fail - Provenance / Licensing] shipped wheel license misstated in NOTICE")
-    if w_undoc:
-        # v14 (item 34): each wheel's license as read from its METADATA must be in NOTICE.md -- Tier A now
-        _fail(TIER_A, "NOTICE gives no license for vendored wheel(s): %s%s -- list each wheel's license from its METADATA "
-              "(guidelines §1.6)" % (w_undoc[:6], " (+%d more)" % (len(w_undoc) - 6) if len(w_undoc) > 6 else ""),
-              "[Fail - Provenance / Licensing] shipped wheel license undocumented in NOTICE")
-    # v14 (item 34): a first-party code row with a real license; every shipped archive documented; a modified upstream
-    # archive carries its upstream sha256 and a dated note of the change
-    _fp_ok, _fp_det = _notice_first_party(notice)
-    if not _fp_ok:
-        _fail(TIER_A, "%s -- first-party code needs a row with a real license (guidelines §1.6; 'License: N/A' is a fail)"
-              % _fp_det, "[Fail - Provenance / Licensing] no first-party code license in NOTICE")
-    _ar_f, _ar_m = _archive_notice_findings(ctx, notice)
-    for _x in _ar_f:
-        _fail(TIER_A, _x, "[Fail - Provenance / Licensing] shipped archive provenance incomplete in NOTICE")
-    manual.extend(_ar_m)
-    # V13e (#7): npm license claims vs the shipped lockfile; dangling provenance pointers in ANY shipped NOTICE
-    try:
-        _npm = npm_license_report(ctx)
-    except Exception as e:  # pragma: no cover -- degrade to a WARN
-        _npm = []
-        warn.append("EN4: npm license check errored (%r) -- compare the NOTICE npm claims with the lockfile by hand" % e)
-    _dang = [r for r in _npm if r["kind"] == "dangling"]
-    _npm_a = [r for r in _npm if r["tier"] == "A" and r["kind"] != "dangling"]
-    _npm_p = [r for r in _npm if r["tier"] == "probable"]
-
-    def _npm_fmt(r):
-        return "%s@%s (%s%s) vs %r (%s; %s)" % (r["pkg"], r["version"], r["license"] or "no license",
-                                                 ", optional" if r["optional"] else (", dev" if r["dev"] else ""),
-                                                 r["claim"], r["notice_where"], r["lock_where"])
-    if _dang:
-        _fail(TIER_A, "NOTICE points provenance at a file the bundle does not ship: %s (calibration case 5's dangling "
-              "lockfile pointer; a false statement in ANY shipped NOTICE is Tier A)"
-              % ["%s -> %s" % (r["notice_where"], r["claim"]) for r in _dang[:6]],
-              "[Fail - Provenance / Licensing] NOTICE provenance pointer to a file that does not ship")
-    if _npm_a:
-        _fail(TIER_A, "NOTICE MISSTATES npm dependency licenses (%d package(s) contradict an explicit claim): %s"
-              % (len({r["pkg"] for r in _npm_a}), [_npm_fmt(r) for r in _npm_a[:4]]),
-              "[Fail - Provenance / Licensing] npm dependency license misstated in NOTICE")
-    if _npm_p:
-        warn.append("[MUST-CONFIRM] EN4: %d npm package(s) would contradict a NOTICE license claim if installed in the "
-                    "image (optional platform build matching the image's libc, or a devDependency): %s -- a false "
-                    "license statement is Tier A once shown installed" % (len(_npm_p), [_npm_fmt(r) for r in _npm_p[:4]]))
-    for r in _npm:
-        if r["tier"] == "note":
-            warn.append("EN4: %s is %s -- npm license claims not checked against it"
-                        % (r["lock_where"], "lockfileVersion 1 (no per-package license data)" if r["kind"] == "v1-lockfile"
-                           else "unreadable/oversized"))
-
+    # V17: provenance/licensing checks moved to check_EN5 (its own scored dimension).
     ver_files = [("tests", "behavior", "behavior.sh"), ("tests", "behavior", "check.py"),
                  ("tests", "test.sh")]
     baked = []
@@ -6799,6 +6695,153 @@ def check_EN4(ctx):
                   "backend internal=%s; report judge guard=%s, fail-closes=%s; reward from behavior gate=%s; "
                   "wheel/npm licenses consistent"
                   % (internal_any, rj["guard"], bool(failclose), reward_from_behavior), live=live, warn=warn)
+
+
+def check_EN5(ctx):
+    # V17: Provenance / Licensing is its OWN scored dimension (split out of EN4), graded 2/3/5.
+    #   Fail(2)   : a third-party component attributed NOWHERE in the task files; a FALSE/misstated
+    #               attribution; OR a component that cannot be legally used for commercial purposes.
+    #   Non-Fail(3): a component not in the top-level NOTICE.md but plausibly credited elsewhere.
+    #   First-party (self-written) code needs NO provenance (V17) -- no check.
+    warn, live, manual = [], [], []
+    fails = []
+
+    def _fail(tier, msg, fm):
+        fails.append((tier, msg, fm))
+
+    notice = _en4_notice_text(ctx)
+
+    # --- V17 NEW hard fail: a third-party component that cannot be used commercially ---
+    _NONCOMMERCIAL = re.compile(
+        r'(?i)non[-\s]?commercial|\bCC[-\s]?BY[-\s]?NC\b|\bBY[-\s]?NC\b|Commons\s+Clause|'
+        r'PolyForm[-\s]?Noncommercial|Prosperity\s+Public\s+License|not\s+for\s+commercial|'
+        r'no\s+commercial\s+use|\bCC[-\s]?NC\b')
+    _nc_hits = []
+    try:
+        for w in _en4_vendored_wheels(ctx):
+            meta = _en4_wheel_metadata(w[0]) or ""
+            for ln in meta.splitlines():
+                if re.match(r'(?i)\s*(License|Classifier)\s*:', ln) and _NONCOMMERCIAL.search(ln):
+                    _nc_hits.append("%s: %s" % (os.path.basename(w[0]), ln.strip()[:80]))
+    except Exception as e:
+        warn.append("EN5: wheel non-commercial scan errored (%r) -- check wheel licenses by hand" % e)
+    for ln in notice.splitlines():
+        if _NONCOMMERCIAL.search(ln) and not re.search(r'(?i)\b(no|not|never|without|free of|excluding)\b', ln):
+            warn.append("[MUST-CONFIRM] EN5: NOTICE.md mentions a non-commercial restriction: %r -- if a shipped "
+                        "third-party component truly cannot be used commercially, EN5 is a Fail (V17)" % ln.strip()[:100])
+    if _nc_hits:
+        _fail(TIER_A, "third-party component(s) under a license that prohibits commercial use: %s (V17: cannot be "
+              "legally used for commercial purposes)" % _nc_hits[:4],
+              "[Fail - Provenance / Licensing] component not usable for commercial purposes")
+
+    # --- attribution / licensing (V17 where-pivot: not-in-NOTICE-but-elsewhere = Non-Fail(3) = Tier B) ---
+    has_license = bool(re.search(
+        r'(?i)licen[sc]e|copyright|\(c\)\s|©|\b(MIT|BSD(?:-[0-9](?:-Clause)?)?|Apache(?:[ -]?2(?:\.0)?)?|'
+        r'[AL]?GPL(?:[ -]?v?[23](?:\.0)?)?|MPL(?:[ -]?2\.0)?|ISC|Unlicense|CC0|Zlib|BSL|PSF|WTFPL)\b', notice))
+    if not has_license:
+        _fail(TIER_B, "NOTICE.md names no license (no license/copyright word, no SPDX id) -- V17: Fail(2) if a "
+              "third-party component is licensed nowhere in the task files, Non-Fail(3) if credited elsewhere",
+              "[Fail - Provenance / Licensing] NOTICE lacks a license mention")
+
+    build_digests = set()
+    for df in ctx.walk("environment"):
+        if os.path.basename(df) == "Dockerfile":
+            build_digests |= set(re.findall(r'sha256:[0-9a-f]{64}', ctx.read_abs(df) or ""))
+    _data, cpath, _ = ctx.compose()
+    build_digests |= set(re.findall(r'sha256:[0-9a-f]{64}', ctx.read_abs(cpath) or "" if cpath else ""))
+    notice_digests = set(re.findall(r'sha256:[0-9a-f]{64}', notice))
+    missing_dig = build_digests - notice_digests
+    if missing_dig:
+        _fail(TIER_B, "build digest(s) absent from NOTICE.md: %s (V17: Non-Fail(3) unless the image is attributed "
+              "nowhere)" % sorted(missing_dig), "[Fail - Provenance / Licensing] build digest missing from NOTICE")
+
+    try:
+        _bil = base_image_license_report(ctx)
+    except Exception as e:
+        _bil = []
+        warn.append("EN5: base-image license check errored (%r) -- check each image's NOTICE line by hand" % e)
+    _wrong_img = [r for r in _bil if r["status"] == "wrong"]
+    _miss_img = [r for r in _bil if r["status"] == "missing"]
+    if _wrong_img:
+        _fail(TIER_A, "base-image license WRONG (false attribution) in environment/NOTICE.md: %s"
+              % ["%s: %s (expected %s)" % (r["image"], r["notice_says"], r["expected"]) for r in _wrong_img[:6]],
+              "[Fail - Provenance / Licensing] base-image license wrong in NOTICE")
+    if _miss_img:
+        _fail(TIER_B, "base-image license MISSING from environment/NOTICE.md: %s (V17: Non-Fail(3) unless the image is "
+              "licensed nowhere in the task files; this skill historically scored it stricter -- confirm)"
+              % [r["image"] for r in _miss_img[:6]],
+              "[Fail - Provenance / Licensing] base-image license missing from NOTICE")
+
+    _SKIP_PKG = {"pytest", "pytest-asyncio", "pytest-cov", "faker", "mock", "coverage", "tox",
+                 "flake8", "black", "mypy", "ruff", "pylint", "isort"}
+    undoc, seen_nm = [], set()
+    for _dp, _dn, _fns in os.walk(ctx.p("environment")):
+        if "requirements.txt" not in _fns:
+            continue
+        for ln in (ctx.read_abs(os.path.join(_dp, "requirements.txt")) or "").splitlines():
+            ln = ln.strip()
+            if not ln or ln.startswith(("#", "-")):
+                continue
+            nm = re.split(r'[\[<>=!~;\s]', ln, maxsplit=1)[0].strip().lower()
+            if not nm or nm in _SKIP_PKG or nm in seen_nm:
+                continue
+            if not any(v in notice.lower() for v in (nm, nm.replace("-", "_"), nm.replace("_", "-"))):
+                seen_nm.add(nm)
+                undoc.append((os.path.relpath(os.path.join(_dp, "requirements.txt"), ctx.task), nm))
+    if undoc:
+        _fail(TIER_B, "NOTICE.md omits shipped pip dependencies: %s (V17: Non-Fail(3) unless licensed nowhere)"
+              % ["%s:%s" % (r, n) for r, n in undoc[:6]],
+              "[Fail - Provenance / Licensing] shipped dependency undocumented in NOTICE")
+
+    w_mis, w_undoc = _wheel_license_findings(ctx, notice)
+    if w_mis:
+        _fail(TIER_A, "NOTICE MISSTATES vendored-wheel licenses (false attribution): %s" % w_mis[:6],
+              "[Fail - Provenance / Licensing] shipped wheel license misstated in NOTICE")
+    if w_undoc:
+        _fail(TIER_B, "NOTICE gives no license for vendored wheel(s): %s (V17: Non-Fail(3) unless licensed nowhere)"
+              % w_undoc[:6], "[Fail - Provenance / Licensing] shipped wheel license undocumented in NOTICE")
+
+    try:
+        _ar_f, _ar_m = _archive_notice_findings(ctx, notice)
+    except Exception:
+        _ar_f, _ar_m = [], []
+    for _x in _ar_f:
+        _fail(TIER_B, _x + " (V17: Non-Fail(3) unless attributed nowhere)",
+              "[Fail - Provenance / Licensing] shipped archive provenance incomplete in NOTICE")
+    manual.extend(_ar_m)
+
+    try:
+        _npm = npm_license_report(ctx)
+    except Exception as e:
+        _npm = []
+        warn.append("EN5: npm license check errored (%r) -- compare the NOTICE npm claims with the lockfile by hand" % e)
+    _dang = [r for r in _npm if r["kind"] == "dangling"]
+    _npm_a = [r for r in _npm if r["tier"] == "A" and r["kind"] != "dangling"]
+    _npm_p = [r for r in _npm if r["tier"] == "probable"]
+
+    def _npm_fmt(r):
+        return "%s@%s (%s) vs %r (%s)" % (r["pkg"], r["version"], r["license"] or "no license",
+                                          r["claim"], r["notice_where"])
+    if _dang:
+        _fail(TIER_A, "NOTICE points provenance at a file the bundle does not ship (false statement): %s"
+              % ["%s -> %s" % (r["notice_where"], r["claim"]) for r in _dang[:6]],
+              "[Fail - Provenance / Licensing] NOTICE provenance pointer to a file that does not ship")
+    if _npm_a:
+        _fail(TIER_A, "NOTICE MISSTATES npm dependency licenses (%d package(s) contradict an explicit claim): %s"
+              % (len({r["pkg"] for r in _npm_a}), [_npm_fmt(r) for r in _npm_a[:4]]),
+              "[Fail - Provenance / Licensing] npm dependency license misstated in NOTICE")
+    if _npm_p:
+        warn.append("[MUST-CONFIRM] EN5: %d npm package(s) would contradict a NOTICE license claim if installed: %s"
+                    % (len(_npm_p), [_npm_fmt(r) for r in _npm_p[:4]]))
+
+    if fails:
+        fails = sorted(fails, key=lambda f: 1 if f[0] == TIER_B else 0)
+        return Result(FAIL, " || ".join("%s %s" % (tier, msg) for tier, msg, _ in fails),
+                      failmode=" | ".join(dict.fromkeys("%s %s" % (fm, tier) for tier, _, fm in fails)),
+                      warn=warn, manual=manual)
+    return Result(PASS, "every third-party component attributed in NOTICE.md; no non-commercial-use license",
+                  warn=warn, manual=manual)
+
 
 
 # =========================================================================== #
@@ -10013,9 +10056,9 @@ def gl_security_logging(ctx):
     auth_logged = any(re.search(r"(?i)'(login|logout|access_denied|denied|failure)'|log_event", ctx.read_abs(ctx.p(lf)) or "")
                       for lf in log_files)
     warn = []
-    # EN5 caveat: exploit-path events may be unlogged (contested, not a V11 row)
+    # security-logging caveat: exploit-path events may be unlogged (contested, not a scored V17 row)
     warn.append("GL-security-event-logging: confirm the EXPLOIT action itself is logged (traversal + token reuse). "
-                "If only decoy/CRUD hits the log, a strict reviewer may flag EN5 -- but V11 has no EN5 row (flag only).")
+                "If only decoy/CRUD hits the log, a strict reviewer may flag the security-event-logging SOT item -- not a scored V17 row (flag only).")
     return Result(PASS, "logging facility in .php/.py found (%s); auth/authz decisions logged=%s"
                   % (log_files[:3], auth_logged), warn=warn)
 
@@ -10550,6 +10593,7 @@ SCORED_ROWS = [
         ("EN2", "Isolation and Segmentation", check_EN2),
         ("EN3", "Credential and Egress Hygiene", check_EN3),
         ("EN4", "Operational and Reproducibility", check_EN4),
+        ("EN5", "Provenance / Licensing", check_EN5),
     ]),
     ("Vulnerability", [
         ("VU1", "Secret Authenticity", check_VU1),
@@ -11008,7 +11052,7 @@ def main(argv=None):
     print("\n" + "=" * 78)
     print("SUMMARY")
     print("=" * 78)
-    print("V14 scored rows (%d): PASS %d  FAIL %d  ERROR %d  LIVE %d  MANUAL %d  WARN %d  DEFERRED %d"
+    print("V17 scored rows (%d): PASS %d  FAIL %d  ERROR %d  LIVE %d  MANUAL %d  WARN %d  DEFERRED %d"
           % (len(scored), count(PASS), n_fail, n_err, count(LIVE), count(MANUAL), count(WARN), count(DEFERRED)))
     if _tb:
         print("  of the FAIL rows, %d are Tier-B ONLY (%s): QC-noisy patterns -- must-fix before submit, but QC may "
@@ -11057,7 +11101,7 @@ def main(argv=None):
         if degraded:
             print("RESULT: INCOMPLETE: PyYAML not importable; compose-derived rows were not checked" if _ydeg_err is None
                   else "RESULT: INCOMPLETE: yaml_degraded() raised %r; compose-derived rows may not have been checked" % _ydeg_err)
-        print("RESULT: %d V14 SCORED ROW(S) WOULD FAIL QC (Tier A/C or untagged) — fix before submission." % n_gate)
+        print("RESULT: %d V17 SCORED ROW(S) WOULD FAIL QC (Tier A/C or untagged) — fix before submission." % n_gate)
         if n_gblock:
             print("RESULT: %d BLOCKING GUIDELINE / PLATFORM RULE(S) FAIL (%s) — no rubric deduction, but the task cannot "
                   "be submitted until fixed." % (n_gblock, [r[1] for r in _gblock]))

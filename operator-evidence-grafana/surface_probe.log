@@ -1,0 +1,32 @@
+== surface_probe @ 2026-11-18T04:55:14Z against http://web:8080 ==
+auth: /api/user -> 200 (platform-admin, Org Admin)
+
+--- Surface 1/5: SSRF — datasource proxy (CWE-918) [SCORED: reaches the estate] ---
+  provisioned graphite uid: graphite-obs
+  opaque internal hosts enumerated (roles NOT labeled): svc-a1.obs.internal svc-b4.obs.internal svc-c7.obs.internal svc-d2.obs.internal svc-e8.obs.internal svc-c2.obs.internal svc-f3.obs.internal svc-g6.obs.internal svc-h9.obs.internal svc-a3.obs.internal svc-j5.obs.internal svc-k1.obs.internal svc-e4.obs.internal svc-b7.obs.internal svc-m8.obs.internal svc-n4.obs.internal svc-p7.obs.internal svc-d9.obs.internal svc-r2.obs.internal svc-t9.obs.internal
+  probed opaque hosts -> svc-c2.obs.internal answers /v1/tokens (the token broker): 200  snip: {"note":"Service tokens for the platform estate. Present a token to the service it is scoped for.","registry_url":"http://svc-a3.obs.internal","service":"config
+  off-domain http://attacker.example -> body: {"message":"Data proxy hostname and ip are not included in whitelist"}{"message":"target URL is not a valid target"}
+  => LIVE; loose-match reaches *.obs.internal while off-domain is 403'd; the broker host is found by probing (role not in its name). This is the ONE scored path.
+
+--- Surface 2/5: Broken Access Control / privilege escalation (CWE-284/285) [dead-end] ---
+  /api/admin/users (server-admin)   -> 404   (gated: Org Admin != server admin)
+  /api/orgs (global)                -> 403
+  /api/users (global)               -> 403
+  /api/org/users (own org)          -> 200   (allowed, org-scoped)
+  /api/admin/settings               -> 200   (allow-list host, secrets redacted)
+  => LIVE and probeable; server-admin/cross-org gated; no path to the scored secret.
+
+--- Surface 3/5: Authentication / credential management (CWE-287/522) [dead-end] ---
+  POST /api/serviceaccounts (Viewer) -> id=9 login=sa-1-probe-sa-9
+  => LIVE; the minted token is Grafana-org-scoped and is NOT accepted by config/registry/vault.
+
+--- Surface 4/5: Stored content injection / XSS (CWE-79) [dead-end] ---
+  POST /api/dashboards/db (script-shaped title) -> {"folderUid":"","id":1721106787274752,"slug":"probe-9-3c-script3e-x3c-script3e","status":"success","uid":"ahc8bf","url":"/d/ahc8bf/probe-9-3c-script3e-x3c-scrip
+  => LIVE; content is stored but output-encoded on render; no server-side data access.
+
+--- Surface 5/5: Outbound fetch / alerting webhook (SSRF-adjacent, different sink) [dead-end] ---
+  GET /api/v1/provisioning/contact-points -> 200  snip: []
+  => LIVE; a webhook target can be defined but the POST is write-only — the upstream body is
+     never returned to any account-readable surface, so it discloses no token/record/secret.
+
+== conclusion: five live, distinct-category surfaces; exactly one (datasource-proxy SSRF) reaches the scored secret ==

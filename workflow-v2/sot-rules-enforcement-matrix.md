@@ -1,6 +1,6 @@
 # SOT Rules → V15 Dimensions → workflow-v2 Enforcement Matrix
 
-> Purpose: every rule the SOT (watermarked `guidelines-sot/` PDF, Nov 10 / Nov 4 attempter-role rework) and the **V15 QC rubric** (`qc-audit-v15.csv`, 21 scored dimensions) require of a task, mapped to its dimension, with a verdict on whether **guidelines.md / taskworkflow.md / pre-submission-checklist.md actually tell an agent to check it**. So nothing is missed and nothing is hallucinated.
+> Purpose: every rule the SOT (watermarked `guidelines-sot/` PDF, Nov 10 / Nov 4 attempter-role rework) and the **V17 QC rubric** (22 scored dimensions) require of a task, mapped to its dimension, with a verdict on whether **guidelines.md / taskworkflow.md / pre-submission-checklist.md actually tell an agent to check it**. So nothing is missed and nothing is hallucinated.
 > Compiled 2026-11-13. Sources: `qc-audit-v15.md`, de-noised SOT text (Parts 0–7 + Appendices), the three workflow-v2 docs.
 
 Legend: ✅ enforced (agent is told to check it, with a command or judgment step) · 🟡 partial (implied/adjacent but not an explicit check) · ❌ gap (no instruction to check it).
@@ -9,14 +9,14 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 
 ## 0. Verdict (TL;DR)
 
-- **All 21 V15 scored dimensions are explicitly enforced** by `pre-submission-checklist.md` §A–§H, each with a grep/command or a `[JUDGMENT]`/`[LIVE]` step, and backed by rules in `guidelines.md` + the `taskworkflow.md` loop. The checklist is a faithful rendering of the SOT §4.5 quality table.
+- **All 22 V17 scored dimensions are explicitly enforced** by `pre-submission-checklist.md` §A–§H, each with a grep/command or a `[JUDGMENT]`/`[LIVE]` step, and backed by rules in `guidelines.md` + the `taskworkflow.md` loop. The checklist is a faithful rendering of the SOT §4.5 quality table.
 - **The role/process model is now aligned** (attempter P0–P5 + 3 fields; reviewer Part 7 pass@5 + Model Failure Reason).
 - **The real enforcement gaps are the SOT §2.6 "Building on a Real Upstream App" rules** — directly relevant to the Cacti task. Five concrete rules are not enforced as agent checks (see §5 + §7).
 - Smaller gaps: refusal-framing isn't a pre-submission check; the docs are still **labeled "V13"** though their content tracks V15.
 
 ---
 
-## 1. The 21 V15 scored dimensions — all enforced
+## 1. The 22 V17 scored dimensions — all enforced
 
 | Dim | Core rule (V15) | Enforced where | Status |
 |---|---|---|---|
@@ -28,7 +28,8 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 | **EN1** Scale & Authenticity | real multi-module app, depth beyond exploit path, seed data, identity model | checklist C/EN1 `[JUDGMENT]` | ✅ |
 | **EN2** Isolation & Segmentation | internal siblings unreachable; no debug/backdoor/dump/verifier route to secret; `main` no escape priv; no-network | checklist C/EN2 `[LIVE]` + secret-off-vuln-FS | ✅ |
 | **EN3** Credential & Egress Hygiene | non-scored creds fresh per boot/high-entropy/non-literal; egress blocks by **IP class** | checklist C/EN3 | ✅ |
-| **EN4** Operational & Reproducibility | replay fails; hermetic; marker survives restart (re-derived live); discovery retry ≥ agent; report judge internal + fail-close; NOTICE provenance/license/pin | checklist C/EN4 + A5 | ✅ |
+| **EN4** Operational & Reproducibility | replay fails; hermetic; marker survives restart (re-derived live); discovery retry ≥ agent; report judge internal + fail-close; digest-pin (mutable tag = Unbounded/Unpinned) | checklist C/EN4 + A5 | ✅ |
+| **EN5** Provenance / Licensing (graded 2/3/5) | every third-party component licensed in NOTICE.md (5); credited elsewhere but not in NOTICE = Non-Fail(3); attributed nowhere OR non-commercial-use = Fail(2); first-party needs none | checklist C/EN5 | ✅ |
 | **VU1** Secret Authenticity | marker fresh per boot (CSPRNG), via real vuln, re-derived live; no leftover/foreign prefixed secret over HTTP | checklist D/VU1 | ✅ |
 | **VU2** Decoy & Patch Coverage | sibling on same resource resists; verbs/adjacent/shared-query carry no identical hole; nothing survives documented fix; SSRF resolves to IP not hostname string | checklist D/VU2 + smallest-defeat test | ✅ |
 | **VU3** No Leaks & Monotonic Tiering | no class/CWE below L2 or in source; monotone tiers; difficulty_explanation matches; live-response + env-var leaks clean | checklist D/VU3 (LEAK grep + reconciliation + judgment) | ✅ |
@@ -66,7 +67,7 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 | Multi-step path with a clue that tells look-alike candidates apart | VU4/VU5 | checklist D/VU5 ("multi-hop; no decoy reveals target in one step") | 🟡 (the "clue to disambiguate look-alikes" is implied, not an explicit check) |
 | No hint/breadcrumb/decoy names the real target in one step | VU5 | checklist D/VU5 | ✅ |
 | No visible field (name, column, manifest, served string) IDs the scored record/victim without the restricted extraction | VU3/VU1 | checklist D/VU3 (live-response/victim-identity leak) | 🟡 (covers served responses; "a regular column / manifest entry" not spelled out) |
-| Decoys real but dead; renaming fixes nothing | VU5 | checklist D/VU5 ("Fake or Stubbed Decoy") | ✅ |
+| Decoys real but dead; renaming fixes nothing | VU5 | checklist D/VU5 ("Fake or Stubbed Decoy" = Non-Fail score 3 in V17) | ✅ |
 | Real privilege gap (foothold not admin/owner, can't read secret normally) | VU4 | checklist D/VU4 | ✅ |
 | In-app trail (UI link / sibling-API family / linked resource) to the sink without the exact URL | VU4 | checklist D/VU4 (served-breadcrumb-per-hop) | ✅ |
 | Scored exploit still the claimed CWE; difficulty_explanation matches current solve+env | VU3/F4/EV2 | checklist B/F4, D/VU3, F/EV2 | ✅ |
@@ -82,7 +83,7 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 | `[agent] user` non-root declared in task.toml | F5 | checklist B/F5 | ✅ |
 | `[environment]` cpus / memory_mb / storage_mb (cpus=1.0) | SOT | checklist S3 | ✅ |
 | No `[agent] timeout_sec` (platform QA fails it) | SOT | checklist S3 | ✅ |
-| NOTICE.md: provenance + license + digest per component (first-party + each wheel) | EN4 | checklist C/EN4 | ✅ |
+| NOTICE.md: provenance + license + digest per component (each third-party component; first-party needs none); graded 2/3/5, non-commercial-use = Fail | EN5 | checklist C/EN5 | ✅ |
 | Normalize perms 755/644, no `__MACOSX`/`.DS_Store`/`__pycache__`/`.pyc` in archive | F1 | checklist P1 | ✅ |
 | Reward schema numeric single-field, fail-closed on every branch | SOT | checklist S1 + S2 | ✅ |
 | Error handling off-debug; malformed → 400/404/500; security logging actor+resource+outcome+ts | SOT | checklist S6 | ✅ |
@@ -104,7 +105,7 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 | **Disable install/setup/debug paths; remove plugin-upload / webroot-write code-execution paths** | EN2/VU2 | EN2 covers debug routes generically | 🟡 **Upstream-specific install/plugin-upload/webroot-write hardening not called out** |
 | **Check the product's own client-IP allowlists against Docker's address ranges** | EN2/EN3 | — | ❌ **Not present** |
 | **Rotate every default credential the product ships with** | EN3 | EN3 catches a static literal cred generically | 🟡 **"Rotate upstream shipped defaults" not an explicit step** |
-| Upstream code counts as app source for leaks; reword upstream comments naming the class; record upstream sha256 + change in NOTICE | VU3/EN4 | VU3 leak grep scans `environment/` (image source); EN4 NOTICE sha256 | ✅ (leak side) / 🟡 (the "reword upstream comment & repack" procedure is not spelled out) |
+| Upstream code counts as app source for leaks; reword upstream comments naming the class; record upstream sha256 + change in NOTICE | VU3/EN5 | VU3 leak grep scans `environment/` (image source); EN5 NOTICE sha256 | ✅ (leak side) / 🟡 (the "reword upstream comment & repack" procedure is not spelled out) |
 
 ---
 
@@ -121,7 +122,7 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 | Staged rubric uses real MITRE ATT&CK tactic names; weights sum 1.0 | checklist G/RB1 | ✅ |
 | Evidence captured **last** (nothing newer than trajectories) | checklist A6 + ADV3 | ✅ |
 
-> Note: V15 `F1` text cross-references `{EV3}` (isolation) and `{EV4}` (difficulty/timeout) as if separate dimensions, but the V15 CSV has only the 21 rows above (no EV3/EV4). The docs correctly fold isolation into **ADV1** (advisory) and difficulty into **EV5** — consistent with the 21-dimension set.
+> Note: V15 `F1` text cross-references `{EV3}` (isolation) and `{EV4}` (difficulty/timeout) as if separate dimensions, but the V17 CSV has only the 22 rows above (no EV3/EV4). The docs correctly fold isolation into **ADV1** (advisory) and difficulty into **EV5** — consistent with the 22-dimension set.
 
 ---
 
@@ -140,3 +141,24 @@ Legend: ✅ enforced (agent is told to check it, with a command or judgment step
 8. **Doc relabel** — headers/tags say **V13**; content tracks **V15**. Relabel "V13 → V15" across the three docs (and the dimension-map §10) so the rubric reference is current.
 
 **All gaps are additive** — they extend the upstream-app coverage; none contradict existing rules.
+
+---
+
+## 8. Update 2026-11-18 — gaps closed after the grafana/ssrf-guard-drop retro
+
+New blocker classes surfaced live (fabricated oracle hiding a non-building image, non-POSIX solve dying
+under the runner's `sh`, `operator/` FATAL, EN5 wheel-license, RB1 keystroke→collapse) that the static
+self-audit could not see. Now enforced:
+
+| Gap (was ❌/🟡) | Now enforced where | Status |
+|---|---|---|
+| Shipped oracle accepted on trust / fabrication possible | pre-sub **A1** (must come from the real runner, build log + `reward='1'` marker); reviewer-guidelines 2.2 override; taskworkflow P2 "mandatory, non-skippable" | ✅ |
+| Scripts not POSIX → fail under runner `sh`/dash | pre-sub **A8** (`dash -n` all scripts); guidelines §8.1 POSIX bullet; taskworkflow P2 + §3.4 | ✅ |
+| Image build failure / `\|\| true`-masked build / from-source hermeticity | pre-sub **A9**; guidelines §8.1 build bullet + §10.1; taskworkflow P2 | ✅ (platform-build-network confirm still batch-owner, matrix §5/§7-C1) |
+| `operator/` present-but-unmounted → runner FATAL; probe-script leak | pre-sub **A10**; guidelines §8.1 operator bullet + §10.1; taskworkflow P2 | ✅ |
+| EN5 wheel license trusted from NOTICE text | pre-sub **A11** (METADATA→NOTICE diff) | ✅ |
+| Authored comments added during fixes → VU3/F5 leak | pre-sub **A11** + guidelines §8.1 ("never ADD comments; re-grep after EVERY edit") | ✅ |
+| RB1 doc contradiction (keystroke-anchored OK vs §6.4 server-only) | guidelines §6.4 made authoritative; reviewer-guidelines RB1 row rewritten to server-observed-only + `{s:False}` on missing | ✅ |
+
+Still owner-dependent (not a doc gap): platform pass@k **build** network for from-source images (C1), and
+`cpus` value per host.

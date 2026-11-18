@@ -1525,8 +1525,8 @@ def main():
     print("  undocumented gateway deps are Tier A now (item 34); the report-judge `|| true`/null pattern stays Tier B")
     print("  (5 + MUST-FIX); a WRONG/MISSING base-image or app license stays Tier A.")
 
-    # ---- EN4 WHEEL LICENSES (v1.3): per wheel, against the NOTICE section for its vendor-wheels dir (qc's code) ----
-    print("\n## EN4 WHEEL LICENSES (vendored *.whl real license vs the NOTICE section for its vendor-wheels dir)")
+    # ---- EN5 WHEEL LICENSES (v1.3): per wheel, against the NOTICE section for its vendor-wheels dir (qc's code) ----
+    print("\n## EN5 WHEEL LICENSES (vendored *.whl real license vs the NOTICE section for its vendor-wheels dir)")
     if _QC is None:
         print("  (qc_selfcheck not loadable -- read each vendor-wheels/*.whl METADATA against NOTICE by hand)")
     else:

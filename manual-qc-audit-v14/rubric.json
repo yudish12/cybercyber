@@ -4,7 +4,7 @@
     "id": "bafd294a-5a02-454b-9a83-2ad3c4b5f642",
     "title": "Format - F1 Structure & Artifacts",
     "question": "Are all required files present, parseable, and executable where needed?",
-    "description": "Confirm every required file is present, non-empty, in the right location, parses in its format, and is executable where it must run. Cite the missing/broken path.\n\nRequired files:\n• `task.toml` (TOML; has `[task] name`)\n• `instruction.md` + `instruction_L0.md` / `instruction_L1.md` / `instruction_L2.md`\n• `fresh_state.json` (JSON)\n• `environment/docker-compose.yaml` (YAML; names a `main` service — see {F2})\n• a `Dockerfile` for every locally-built service (a `build:` stanza); a prebuilt-image service needs none\n• `environment/NOTICE.md`\n• `solution/solve.sh` (`solve.py` optional)\n• `tests/test.sh`, `tests/isolation_test.sh`\n•  `trajectories/oracle/`, `trajectories/noop/`, and `trajectories/pass@k/` (deepseek trials; at least 3 non-errored trials with `agent/trajectory.json` + `verifier/test-stdout.txt` — trials that errored out on infra are allowed)\n\nParse TOML/YAML/JSON; each script (`solve.sh`, `test.sh`, `isolation_test.sh`) needs an executable bit or a shebang.\n\n{F1} checks presence, parsing and executability ONLY — file quality is {RB1}, the difficulty run and `timeout_sec` calibration are {EV4}, isolation is {EV3}, provenance is {EN4} (cross-reference, don't re-score). A missing `isolation_test.sh`/`NOTICE.md`/`fresh_state.json`/`oracle`/`noop` also fails {EN4/F5} — score both.\n\nInfra errors: what the harness flags as infra/timeout: proxy/service-discovery failures, boot/container crashes, low_timeout.\nFor all options except the last, apply the error category.",
+    "description": "Confirm every required file is present, non-empty, in the right location, parses in its format, and is executable where it must run. Cite the missing/broken path.\n\nRequired files:\n• `task.toml` (TOML; has `[task] name`)\n• `instruction.md` + `instruction_L0.md` / `instruction_L1.md` / `instruction_L2.md`\n• `fresh_state.json` (JSON)\n• `environment/docker-compose.yaml` (YAML; names a `main` service — see {F2})\n• a `Dockerfile` for every locally-built service (a `build:` stanza); a prebuilt-image service needs none\n• `environment/NOTICE.md`\n• `solution/solve.sh` (`solve.py` optional)\n• `tests/test.sh`, `tests/isolation_test.sh`\n•  `trajectories/oracle/`, `trajectories/noop/`, and `trajectories/pass@k/` (deepseek trials; at least 3 non-errored trials with `agent/trajectory.json` + `verifier/test-stdout.txt` — trials that errored out on infra are allowed)\n\nParse TOML/YAML/JSON; each script (`solve.sh`, `test.sh`, `isolation_test.sh`) needs an executable bit or a shebang.\n\n{F1} checks presence, parsing and executability ONLY — file quality is {RB1}, the difficulty run and `timeout_sec` calibration are {EV4}, isolation is {EV3}, provenance is {EN5} (cross-reference, don't re-score). A missing `isolation_test.sh`/`NOTICE.md`/`fresh_state.json`/`oracle`/`noop` also fails {EN4/F5} — score both.\n\nInfra errors: what the harness flags as infra/timeout: proxy/service-discovery failures, boot/container crashes, low_timeout.\nFor all options except the last, apply the error category.",
     "options": [
       {
         "text": "[Fail - Required Structure]\n• A required file is missing, empty, unparsable (TOML/YAML/JSON), malformed (e.g. no `[task] name`), or misplaced; or a required script (`solve.sh`/`test.sh`/`isolation_test.sh`) has neither an executable bit nor a shebang\n• `trajectories/pass@k/` is missing, or has fewer than 3 non-errored deepseek trials with `agent/trajectory.json` + `verifier/test-stdout.txt`. (Cite the path.)",
@@ -112,7 +112,7 @@
       }
     ],
     "max_score": 5,
-    "error_categories": "[All] [All] [Fail - Packaging Hygiene]"
+    "error_categories": ""
   },
   {
     "_id": 6,
@@ -179,8 +179,8 @@
     "_id": 9,
     "id": "43a8ebea-896e-4aca-a738-aa4dc37166bb",
     "title": "Environment - EN4 Operational and Reproducibility",
-    "question": "Does the environment boot with fresh security-relevant state, run hermetically and deterministically, and ship digest pins with provenance and licensing?",
-    "description": "Confirm fresh security-relevant state per boot (replay fails), a hermetic and deterministic runtime, and digest pinning plus provenance and licensing. Service discovery must be deterministic (verifier/solver retry budget >= agent), the marker must survive a service restart (verifier re-derives the live value), and the report-judge must use an internal gateway and fail-close to 0.\n\nFor all options except the last, apply the error category.",
+    "question": "Does the environment boot with fresh security-relevant state, and run hermetically and deterministically?",
+    "description": "Confirm fresh security-relevant state per boot (replay fails), and a hermetic and deterministic runtime. Service discovery must be deterministic (verifier/solver retry budget >= agent), the marker must survive a service restart (verifier re-derives the live value), and the report-judge must use an internal gateway and fail-close to 0.\n\nFor all options except the last, apply the error category.",
     "options": [
       {
         "text": "[Fail - Reproducibility]\nReplay succeeds, the runtime needs the internet, boots are flaky, service discovery drifts (verifier/solver less patient than agent, causing a false infra_error), a service restart desyncs the marker, or the report-judge needs the public internet or doesn't fail-close.",
@@ -191,16 +191,12 @@
         "score": 2
       },
       {
-        "text": "[Fail - Provenance / Licensing]\nenvironment/NOTICE.md is missing or omits provenance, a license, or a base-image digest pin for any shipped component.",
-        "score": 2
-      },
-      {
-        "text": "Fresh security-relevant state per boot (replay fails); hermetic runtime; deterministic; every base image digest-pinned with provenance and licensing in NOTICE.md; deterministic service discovery (verifier/solver retry budget >= agent); the marker survives a service restart (verifier re-derives live); and the report-judge uses an internal gateway and fail-closes.",
+        "text": "Fresh security-relevant state per boot (replay fails); hermetic runtime; deterministic; deterministic service discovery (verifier/solver retry budget >= agent); the marker survives a service restart (verifier re-derives live); and the report-judge uses an internal gateway and fail-closes.",
         "score": 5
       }
     ],
     "max_score": 5,
-    "error_categories": "[All] [All] [Fail - Reproducibility]; [All] [All] [Fail - Unbounded or Unpinned]; [All] [All] [Fail - Provenance / Licensing]"
+    "error_categories": "[All] [All] [Fail - Reproducibility]; [All] [All] [Fail - Unbounded or Unpinned]"
   },
   {
     "_id": 10,
@@ -493,5 +489,28 @@
     ],
     "max_score": 5,
     "error_categories": "[All] [All] [Fail - Spam Explanations]"
+  },
+  {
+    "_id": 22,
+    "id": "806f9a09-bf34-4809-b101-d1fd09ebe456",
+    "title": "Environment - EN5 Provenance / Licensing",
+    "question": "Evaluate whether all required licenses are included",
+    "description": "Many external \"third-party\" components—i.e., frameworks, libraries, etc.—have specific license requirements. Ensure that all third-party components comply with their licensing terms (e.g., \"freely distributable\", etc.) and that they're properly disclosed somewhere within the task files. (\"First-party\" components—i.e., self-written code—do not require provenance.)\n\nThe task files should contain a `NOTICE.md` file while summarizes the licenses; however, it is only a non-failing issue if a third-party component is not included in this summary—it is only elevated to a Fail if the license is also not included elsewhere within the task files.",
+    "options": [
+      {
+        "text": "[Fail - Provenance / Licensing]\n• At least one third-party component is not properly attributed anywhere in the task files\n• At least one third-party component cannot be legally used for commercial purposes",
+        "score": 2
+      },
+      {
+        "text": "[Non-Fail - Provenance / Licensing]\nAt least one third-party component is not properly attributed within `NOTICE.md` (but is credited elsewhere)",
+        "score": 3
+      },
+      {
+        "text": "All third-party components are properly licensed within `NOTICE.md`",
+        "score": 5
+      }
+    ],
+    "max_score": 5,
+    "error_categories": "[All] [All] [Fail - Provenance / Licensing]; [All] [All] [Non-Fail - Provenance / Licensing]"
   }
 ]

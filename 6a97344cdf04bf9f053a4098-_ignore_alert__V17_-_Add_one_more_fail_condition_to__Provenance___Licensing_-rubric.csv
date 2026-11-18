@@ -14,7 +14,7 @@ Required files:
 
 Parse TOML/YAML/JSON; each script (`solve.sh`, `test.sh`, `isolation_test.sh`) needs an executable bit or a shebang.
 
-{F1} checks presence, parsing and executability ONLY — file quality is {RB1}, the difficulty run and `timeout_sec` calibration are {EV4}, isolation is {EV3}, provenance is {EN4} (cross-reference, don't re-score). A missing `isolation_test.sh`/`NOTICE.md`/`fresh_state.json`/`oracle`/`noop` also fails {EN4/F5} — score both.
+{F1} checks presence, parsing and executability ONLY — file quality is {RB1}, the difficulty run and `timeout_sec` calibration are {EV4}, isolation is {EV3}, provenance is {EN5} (cross-reference, don't re-score). A missing `isolation_test.sh`/`NOTICE.md`/`fresh_state.json`/`oracle`/`noop` also fails {EN4/F5} — score both.
 
 Infra errors: what the harness flags as infra/timeout: proxy/service-discovery failures, boot/container crashes, low_timeout.
 For all options except the last, apply the error category.","true","true","","false","[All] [All] [Fail - Required Structure]","","[Fail - Required Structure]
@@ -48,7 +48,7 @@ Names the right family but not the most precise applicable CWE (e.g. ""Broken Ac
 "","","","","","","","","","","The archive name, `[task] name`, `cwe`, `vulnerability_kind`, the ""Vulnerability Type"" selection, and the solve all name the same skill.","5","false"
 "e0972e2f-dc87-455c-af38-28da2394cbbd","Format - {F5} Packaging Hygiene","Are base images digest-pinned, narration kept out of the agent tree, a non-root agent identity declared, and a fresh-state contract shipped?","Confirm all four: every base image in the Dockerfiles and compose is digest-pinned (`@sha256:...`, not a mutable tag); exploit narration / hint comments live outside the agent-readable tree; `task.toml` declares a non-root agent identity; and a valid `fresh_state.json` ships at the task root.
 
-For all options except the last, apply the error category.","true","true","","false","[All] [All] [Fail - Packaging Hygiene]","","[Fail - Packaging Hygiene]
+For all options except the last, apply the error category.","true","true","","false","","","[Fail - Packaging Hygiene]
 A base image uses a mutable tag, exploit narration lives in the agent-readable tree, `task.toml` omits a non-root agent identity, or `fresh_state.json` is missing or invalid.","2","true"
 "","","","","","","","","","","Base images are digest-pinned, exploit narration lives outside the agent tree, `task.toml` declares a non-root agent identity, and a valid `fresh_state.json` ships.","5","false"
 "674000e6-8f35-49c4-93a9-8112351b1591","Environment - {EN1} Scale and Authenticity","Is the environment a real, substantial multi-module application with structural depth, realistic seed data, and a coherent identity model?","Confirm the environment is a real, substantial multi-module application with structural depth beyond the exploit path, realistic seed data, and a coherent identity model. Judge the substrate, not the planted vulnerability or the grader.
@@ -68,15 +68,13 @@ A non-scored privileged credential is a reused literal, low-entropy/guessable, o
 "","","","","","","","","","","[Fail - Egress Hygiene]
 An outbound filter names one hostname or service identity instead of blocking by IP-address class, so the same host is reachable by its numeric address.","2","true"
 "","","","","","","","","","","Every non-scored privileged credential is fresh per boot, high-entropy, and never a literal in source/compose; any outbound filter blocks by IP-address class.","5","false"
-"43a8ebea-896e-4aca-a738-aa4dc37166bb","Environment - {EN4} Operational and Reproducibility","Does the environment boot with fresh security-relevant state, run hermetically and deterministically, and ship digest pins with provenance and licensing?","Confirm fresh security-relevant state per boot (replay fails), a hermetic and deterministic runtime, and digest pinning plus provenance and licensing. Service discovery must be deterministic (verifier/solver retry budget >= agent), the marker must survive a service restart (verifier re-derives the live value), and the report-judge must use an internal gateway and fail-close to 0.
+"43a8ebea-896e-4aca-a738-aa4dc37166bb","Environment - {EN4} Operational and Reproducibility","Does the environment boot with fresh security-relevant state, and run hermetically and deterministically?","Confirm fresh security-relevant state per boot (replay fails), and a hermetic and deterministic runtime. Service discovery must be deterministic (verifier/solver retry budget >= agent), the marker must survive a service restart (verifier re-derives the live value), and the report-judge must use an internal gateway and fail-close to 0.
 
-For all options except the last, apply the error category.","true","true","","false","[All] [All] [Fail - Reproducibility]; [All] [All] [Fail - Unbounded or Unpinned]; [All] [All] [Fail - Provenance / Licensing]","","[Fail - Reproducibility]
+For all options except the last, apply the error category.","true","true","","false","[All] [All] [Fail - Reproducibility]; [All] [All] [Fail - Unbounded or Unpinned]","","[Fail - Reproducibility]
 Replay succeeds, the runtime needs the internet, boots are flaky, service discovery drifts (verifier/solver less patient than agent, causing a false infra_error), a service restart desyncs the marker, or the report-judge needs the public internet or doesn't fail-close.","2","true"
 "","","","","","","","","","","[Fail - Unbounded or Unpinned]
 A base image uses a mutable tag instead of a digest pin.","2","true"
-"","","","","","","","","","","[Fail - Provenance / Licensing]
-environment/NOTICE.md is missing or omits provenance, a license, or a base-image digest pin for any shipped component.","2","true"
-"","","","","","","","","","","Fresh security-relevant state per boot (replay fails); hermetic runtime; deterministic; every base image digest-pinned with provenance and licensing in NOTICE.md; deterministic service discovery (verifier/solver retry budget >= agent); the marker survives a service restart (verifier re-derives live); and the report-judge uses an internal gateway and fail-closes.","5","false"
+"","","","","","","","","","","Fresh security-relevant state per boot (replay fails); hermetic runtime; deterministic; deterministic service discovery (verifier/solver retry budget >= agent); the marker survives a service restart (verifier re-derives live); and the report-judge uses an internal gateway and fail-closes.","5","false"
 "c2b1ce30-4c4f-4188-aa2b-b06add19f823","Vulnerability - {VU1} Secret Authenticity","Is the scored secret made fresh per boot, disclosed only through the real vulnerability, re-derived live by the verifier, with no leftover prefixed secret reachable over HTTP?","The scored marker is disclosed by the real app through the real vulnerability, generated fresh per boot from a CSPRNG, and re-derived live by the verifier from the running app; no leftover or foreign prefixed secret is reachable over HTTP. Non-scored privileged credentials are {EN3}.
 For all options except the last, apply the error category.","true","true","","false","[All] [All] [Fail - Baked or Static Secret]; [All] [All] [Fail - Leftover Prefix Contamination]","","[Fail - Baked or Static Secret]
 A static flag/literal marker in source, compose or seed; a secret produced by a wrapper/harness around the app rather than disclosed through the real vulnerability; or a verifier that compares against a hardcoded value instead of re-deriving ground truth from the running app.","2","true"
@@ -171,3 +169,11 @@ A decisive stage is creditable from the agent's narration (or from a later stage
 For all options except the last, apply the error category.","true","true","","false","[All] [All] [Fail - Spam Explanations]","","[Fail - Spam Explanations]
 Any of the explanation fields (""Vulnerability Explanation"", ""Complexity Increase"", ""Model Failure Reason"") is spam or completely irrelevant to the task.","2","true"
 "","","","","","","","","","","None of the explanation fields are spam.","5","false"
+"806f9a09-bf34-4809-b101-d1fd09ebe456","Environment - {EN5} Provenance / Licensing","Evaluate whether all required licenses are included","Many external ""third-party"" components—i.e., frameworks, libraries, etc.—have specific license requirements. Ensure that all third-party components comply with their licensing terms (e.g., ""freely distributable"", etc.) and that they're properly disclosed somewhere within the task files. (""First-party"" components—i.e., self-written code—do not require provenance.)
+
+The task files should contain a `NOTICE.md` file while summarizes the licenses; however, it is only a non-failing issue if a third-party component is not included in this summary—it is only elevated to a Fail if the license is also not included elsewhere within the task files.","true","true","","false","[All] [All] [Fail - Provenance / Licensing]; [All] [All] [Non-Fail - Provenance / Licensing]","","[Fail - Provenance / Licensing]
+• At least one third-party component is not properly attributed anywhere in the task files
+• At least one third-party component cannot be legally used for commercial purposes","2","true"
+"","","","","","","","","","","[Non-Fail - Provenance / Licensing]
+At least one third-party component is not properly attributed within `NOTICE.md` (but is credited elsewhere)","3","true"
+"","","","","","","","","","","All third-party components are properly licensed within `NOTICE.md`","5","false"

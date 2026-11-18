@@ -3,6 +3,21 @@
 Found 2026-11-13 while cross-reading `guidelines.md`, `taskworkflow.md` and `pre-submission-checklist.md`.
 Until the docs are patched, apply the **Resolution** column, not the stale line.
 
+## V17 update (2026-11-17) — rubric now 22 dimensions, EN5 split out
+The QC rubric advanced to **V17** (`6a97344…-V17-…-rubric.csv`, 22 scored dimensions). Applied across
+`guidelines.md`, `taskworkflow.md`, `pre-submission-checklist.md`, `reviewer-guidelines.md`,
+`sot-rules-enforcement-matrix.md` and both `manual-qc-audit-v13-parallel` / `manual-qc-audit-v14` skills:
+- **Provenance / Licensing is its own dimension `EN5`** (split out of EN4). EN4 keeps Reproducibility +
+  digest-pinning (`Unbounded or Unpinned`); EN5 owns NOTICE provenance + every third-party license.
+- **EN5 is graded 2/3/5 on a where-pivot:** in `NOTICE.md` → 5; not in NOTICE but **credited elsewhere in
+  the task files** → **3 Non-Fail** (this *relaxes* the old "only the top-level NOTICE.md counts" auto-fail);
+  attributed **nowhere** → 2 Fail.
+- **New hard-fail:** a third-party component that **cannot be legally used for commercial purposes** → 2 Fail.
+- **First-party (self-written) code needs no provenance.**
+- **VU5 "Fake or Stubbed Decoy": Fail(2) → Non-Fail(3)** (this was already in v14; now also in v13-parallel).
+- The ship bar is now **all 22 at 5**. `references/calibration_log.md` predates V17 and tags provenance cases
+  "EN4" — read those as **EN5**, under the 2/3/5 grading.
+
 | # | Where | Inconsistency | Resolution we follow |
 |---|---|---|---|
 | 1 | taskworkflow §2 P0 step 4 (l.114-115), §3.3 hermetic bullet (l.255), §9 (l.544); guidelines §9 (l.779) | Still says `main` is `network_mode: no-network`, "no proxy to check" | PR #197 wins: `main` has **no `networks:` key**, `allowlist` + `allowed_hosts=[<gateway>]` in `[environment]` and `[agent]` when `main` reaches a sibling; `no-network` only for single-container. Debug "empty response" as discovery/health + sidecar allowlist, not "no proxy". |
@@ -41,4 +56,17 @@ cited dimension, recorded here so the determinations aren't re-litigated:
 
 ## Notes from the jiro audit (NOT doc bugs — corrected my own earlier assumptions)
 - `atif-trajectory` (hyphen) in `tests/report/rubric.toml` is the **correct** rewardkit key — every known-good archive task uses it. Not a typo.
-- A VU3 `environment/**` leak-term hit is only a real fail when the file is **agent-reachable** (served / in the running image / in `main`). Expert-only grading + provenance files (NOTICE.md CVE line, gateway grading code, tests/report criteria, operator catalog — the last two aren't even under `environment/`) legitimately name the scored CWE/CVE. Judge reachability, not just the grep.
+- **VU3 covers ALL task-authored source under `environment/**`, including expert-only gateway / proxy / verifier / init / harness code — reachability is NOT a free pass** (determination 2026-11-17 on jiro/image-cache-deception; supersedes the earlier "only a real fail when agent-reachable / gateway grading code legitimately names the CWE" reading). A comment, docstring, **or identifier** that **narrates this task's scored class or mechanism** (e.g. `cache-poisoning`, `prime_snapshot_cache`, a `cache_key_confusion` label) is a scored VU3 fail even though the agent cannot read the gateway's source — strip it to a neutral, effect-named token (`warm_snapshot_copy`, `attestation_via_disclosed_snapshot`, "serves the stored image without re-checking authorization"). **Narrow functional exemptions that MAY name the class** (because they must, to work): `instruction_L2` (by design); the **top-level `NOTICE.md` provenance line** (the CVE id + upstream CWE, as a licensing fact); and **report-grading criteria** that reference the class to judge the agent's own report (`tests/report/rubric.toml`, `operator/report-rubric.json`). **Not task narration:** unmodified upstream vendor code naming *other* (non-scored) classes in its own security comments, and a **generic identifier** that merely contains a word like `cache` for an app's own unrelated feature (a client API-response cache, a permission-check cache). Judge whether it telegraphs THIS task's vuln — but do not treat "the agent can't reach it" as a pass for task-authored narration of the scored flaw.
+
+## 2026-11-18 — resolved: RB1 keystroke-vs-server-event contradiction + new runner-gated checks
+- **RB1 contradiction RESOLVED.** `guidelines.md` §6.4 (decisive stages credit SOLELY from the gate/audit;
+  missing signal → `{s:False}`, never `passed`) is now marked **authoritative**, and the `reviewer-guidelines.md`
+  RB1 row was rewritten to match (server-observed event per reached stage; no keystroke/substring credit;
+  no collapse). The old "a trajectory-credited technique_fidelity stage anchored on the literal target's own
+  keystrokes is acceptable" wording is superseded — do not apply it.
+- **New checks added (grafana/ssrf-guard-drop retro, `feedbacks/workflow-gaps-from-grafana-retro.md`):**
+  pre-sub **A1** (oracle must come from the real runner; fabricated/non-building = score 1), **A8** (`dash -n`
+  every script — runner uses `sh`), **A9** (image builds; no `|| true`-masked build step; from-source vendored),
+  **A10** (`operator/` mounted-or-absent — runner FATALs otherwise), **A11** (wheel-METADATA→NOTICE license
+  diff; never ADD comments; leak re-grep after every edit). Mirrored in `guidelines.md` §8.1 + §10.1,
+  `taskworkflow.md` P2 + §3.4, and `sot-rules-enforcement-matrix.md` §8.

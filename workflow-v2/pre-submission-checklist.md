@@ -2,7 +2,7 @@
 
 A single pass a subagent runs over a finished `task/` before it ships. Pairs with
 [`taskworkflow.md`](taskworkflow.md) (the build loop) and [`guidelines.md`](guidelines.md) (the rules +
-the V13 dimension map in §10). Aligned to the **V13 QC rubric** (21 dimensions; it wins over the PDF where
+the V13 dimension map in §10). Aligned to the **V13 QC rubric** (22 dimensions; it wins over the PDF where
 they disagree) and `guidelines-sot/` watermarked SOT PDF (Nov 10, 2026, incl. the Nov 4 attempter-role rework) for everything V13 doesn't score.
 
 **Tags:** `[F1]`…`[Spam]` = the V13 dimension the item decides. `[SOT]` = required by the PDF, the runners
@@ -16,7 +16,7 @@ block on it. Pre-V13 IDs (F6, VU6, EV6, TR4, …) → translate with `guidelines
    **evidence** (a `file:line`, a command's output, or the trajectory path).
 3. **Fail closed.** A check you cannot verify is `NOT-VERIFIED` and counts as a blocker, never a pass. A
    clean automated grep does not override a judgment item — read the source.
-4. **Ship only when:** every §A hard gate is green, all 21 V13 dimensions score 5 (F4's score 3 is a
+4. **Ship only when:** every §A hard gate is green, all 22 V13 dimensions score 5 (F4's score 3 is a
    blocker), every §J SOT item passes, there is no `FAIL`, and no `NOT-VERIFIED` remains. Any `WARN` needs
    an explicit judgment note. Then emit the §M verdict.
 
@@ -32,9 +32,15 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
 ---
 
 ## A. Hard gates (all green or do not ship)
-- **A1 Oracle = 1** `[SOT]` — `cat $TASK/trajectories/oracle/reward.txt` is exactly `1`; `reward.json` is
-  `{"reward":1}`; `trajectories/oracle/test.log` is non-empty and shows the **intended endpoint + claimed
-  CWE** succeeding (no hardcoded compare, no stale names). Captured on a fresh boot.
+- **A1 Oracle = 1, captured by the real runner** `[SOT]` — `cat $TASK/trajectories/oracle/reward.txt` is
+  exactly `1`; `reward.json` is `{"reward":1}`; `trajectories/oracle/test.log` is non-empty and shows the
+  **intended endpoint + claimed CWE** succeeding (no hardcoded compare, no stale names). **The evidence must
+  come from actually running `./blackbox-pentest-checks/run-blackbox-pentest-checks.sh --mode oracle task` on
+  THIS tree** — the runner builds every image, boots the stack, and runs `sh /solution/solve.sh`. The
+  `test.log` must therefore carry the runner's own output (the image **build log** and the runner's
+  `reward = '1' (expected '1')` line), not just hand-written `[disc]` lines. **A shipped `oracle=1` whose
+  image does not build, or whose log lacks the runner's markers, is fabricated evidence → Overall Quality 1,
+  never a pass** (do not accept it on trust; re-run). Never hand-write or hand-edit this file.
 - **A2 Noop = 0** `[TR2]` — see §E TR2.
 - **A3 Quality Check clean, judge rows included** `[all]` — `./blackbox-pentest-qa/run-blackbox-pentest-qa.sh
   task` has **no confirmed FAIL** (read the report outside `task/`; correct false positives explicitly).
@@ -43,8 +49,8 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
   judge is **noisy**: a judged row can flip PASS↔FAIL on an unchanged bundle. A lone FAIL that doesn't
   reproduce on re-run and has no traceable file:line cause is noise — correct only the **consistent**/
   traceable fails as confirmed FAILs; log the rest as noise so a later re-run doesn't re-litigate them.
-- **A4 V13 self-score = 21 × 5** `[all]` — score every dimension in §B–§H (or run `manual-qc-audit`, V13,
-  fail-closed; `cyber_quality_check` covers 19 of 21 with a key, but **EN1** and **Spam** are by hand).
+- **A4 V13 self-score = 22 × 5** `[all]` — score every dimension in §B–§H (or run `manual-qc-audit`, V13,
+  fail-closed; `cyber_quality_check` covers 19 of 22 with a key, but **EN1** and **Spam** are by hand).
   Never score from the global `qc-audit` skill (stale V10 rubric).
 - **A5 Report-rubric runs & fails closed** `[SOT/EN4]` — `python $TASK/tests/run_report_rubric.py` runs,
   scores the oracle report sensibly, and any status ≠ graded ⇒ R = 0 (diagnostic; no R gate unless
@@ -60,6 +66,52 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
   local run, so they are a **hard gate, not an advisory**: a `networks:` key on `main`, `no-network` where
   `main` must reach the gateway, or a missing `asciinema` means the task never boots (or produces zero
   pass@k trajectories) on the review platform. See **§N**.
+- **A8 Every shipped script is POSIX (`sh`/dash-safe)** `[SOT → oracle soundness]` — the checks runner
+  executes `solve.sh`, `test.sh`, `isolation_test.sh`, `maze_test.sh`, the stage/report runners and the
+  `environment/**` entrypoints **under `/bin/sh` (dash)**, ignoring the `#!/bin/bash` shebang. A bash-ism
+  (`<<<` here-string, `${v:off:len}` substring, `declare -A`/arrays, `[[ … ]]`) fails to **parse** → the
+  oracle never runs → a false 0 on the platform even when it "works" under bash locally. The shipped
+  `oracle=1` hid exactly this on grafana/ssrf-guard-drop.
+  ```bash
+  for s in $(find "$TASK" -name '*.sh' -not -path '*/vendor-wheels/*'); do dash -n "$s" || echo "NOT POSIX: $s"; done
+  ```
+  Output must be empty. (`local` is fine in dash; `<<<`, `${v:off:len}`, arrays, `[[`/`==` are not — use an
+  `IFS`-newline `for` loop instead of `while read <<<`, and `$(printf '%.Ns' "$v")` instead of `${v:0:N}`.)
+- **A9 Images build, and no build step masks its own failure** `[SOT/F1/EN4]` — A1's runner must actually
+  **build every image and boot it**. Lint the Dockerfiles:
+  ```bash
+  grep -rnE '\|\|[[:space:]]*true|;[[:space:]]*true[[:space:]]*$' "$TASK"/environment/*/Dockerfile   # masked build steps -> empty
+  grep -rnE 'curl |wget |git clone|go (build|get|install)|npm (ci|install)' "$TASK"/environment/*/Dockerfile  # build-time fetches
+  ```
+  A `RUN` that produces an artifact a later stage `COPY`s must **not** end in `|| true` and must assert the
+  artifact exists (`&& test -x <path>`) — otherwise a build failure caches a layer with no output and only
+  surfaces as a confusing downstream `COPY … not found` (grafana/ssrf-guard-drop: `go build -o /out/grafana`
+  with no `mkdir -p /out`, masked by `|| true`). A **from-source build** (Go/npm) that fetches source or
+  modules at build time is a hermeticity risk (EN4/§N): vendor the source tarball + a module cache and build
+  offline (`--no-index`/`GOFLAGS=-mod=vendor`/committed `node_modules` or lockfile), exactly like the pip
+  wheels. Confirm with the batch owner whether the platform's pass@k **build** environment has network.
+- **A10 `operator/` is mounted-and-access-controlled, or absent** `[SOT → runner FATAL]` — the checks runner
+  **FATALs** (`/operator empty inside the container`) when `operator/` exists on the host but the compose
+  does not mount it into `main`. Use `operator/` **only** as the mounted, root-owned/`0600`,
+  agent-unreadable B/R-spec dir (`behavior-catalog.json`, `report-rubric.json`). If the task uses the merged
+  `tests/` B/R format, **do not ship `operator/` at all** — expert probe scripts/logs belong **outside**
+  `task/` (an exploit-walkthrough probe inside the bundle is also a VU3/EN2 leak if ever mounted/read).
+  ```bash
+  if [ -d "$TASK/operator" ]; then grep -q 'operator' "$C" || echo "operator/ present but NOT mounted in compose -> runner will FATAL; move it out of task/ or mount it 0600"; fi
+  ```
+- **A11 Wheel licenses match NOTICE, and the bundle is leak-clean after every edit** `[EN5/VU3/F5]` —
+  EN5's #1 recurring fail is a wrong/假 license; verify each wheel's real `METADATA`, don't trust the NOTICE
+  text (grafana/ssrf-guard-drop shipped `python_dateutil` as `PSF-2.0`; its METADATA is `Dual License` =
+  BSD-3-Clause + Apache-2.0):
+  ```bash
+  for w in "$TASK"/environment/agent/vendor-wheels/*.whl; do
+    n=$(basename "$w" | sed 's/-[0-9].*//'); unzip -p "$w" '*dist-info/METADATA' 2>/dev/null \
+      | grep -iE '^License(-Expression)?:|^Classifier: License' | head -3 | sed "s/^/$n: /"; done
+  # cross-check each against environment/NOTICE.md; a wrong license counts as missing (score 2)
+  ```
+  And **never add explanatory comments to task files**; strip all authored comments from `environment/**`
+  before shipping (keep shebangs, `# syntax=`, upstream/license headers), and **re-run the §8.1 LEAK grep
+  after EVERY edit** — a fix that adds a comment naming the class (`# … SSRF …`) is an immediate VU3/F5 leak.
 
 ---
 
@@ -80,8 +132,8 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
   echo "pass@k trials with trajectory.json + test-stdout.txt: $n (need >= 3 non-errored)"
   ```
   Also: every compose service with a `build:` stanza has its Dockerfile (a prebuilt `image:` or
-  `dockerfile_inline:` needs none). A missing isolation test, NOTICE, fresh_state, oracle or noop **also
-  fails EN4** (and fresh_state also fails F5) — score both. If `$n` is **0** and every
+  `dockerfile_inline:` needs none). A missing isolation test, fresh_state, oracle or noop **also
+  fails EN4**, a missing NOTICE **also fails EN5** (and fresh_state also fails F5) — score both. If `$n` is **0** and every
   `trajectories/pass@k/*/*/exception.txt` says `Failed to start tmux session` (or an asciinema error), the
   agent image is missing `tmux` **or `asciinema`** (terminus-2 records the session) — a provisioning
   failure (§N2, guidelines §9), not an F1 pass.
@@ -159,7 +211,25 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
   service accepts. Any egress filter blocks by **IP-address class** (+ the named backend net), never a
   hostname string.
 - **EN4 Operational & Reproducibility** — fail = `[Fail - Reproducibility]` / `[Fail - Unbounded or
-  Unpinned]` / `[Fail - Provenance / Licensing]`:
+  Unpinned]`:
+  ```bash
+  # every base image digest-pinned (a mutable tag = Unbounded or Unpinned, also F5)
+  grep -rnE '^[[:space:]]*(FROM|image:)[[:space:]]' "$TASK/environment" \
+    --include='Dockerfile*' --include='*.Dockerfile' --include='*compose*.y*ml' | grep -v '@sha256:'
+  # report judge must fail-close: no `|| true` leaving a stale reward, no reward:null
+  grep -nE '\|\|[[:space:]]*true|"?reward"?[[:space:]]*:[[:space:]]*null' "$TASK/tests/test.sh"   # review each
+  ```
+  **[JUDGMENT]** Replay fails (fresh security state per boot); hermetic runtime (no runtime
+  pip/apt/curl); the **scored value survives a service restart** (derived deterministically from a
+  persistent seed or on a named volume — never re-minted at random into a non-volume path); verifier/solver
+  retry budget ≥ the agent's **read as a chain** — the inner check's timeout (`check.py`
+  `command_succeeds`) > the retry/backoff budget of what it runs (`behavior.sh`), and `[verifier]
+  timeout_sec` > that inner check **+** the report-judge pass, or the verifier aborts a solve the agent
+  earned; the report judge targets an internal gateway only. A build-time
+  live-PyPI `pip install` is a hygiene nit, not an EN4 fail on its own (`guidelines.md` §8.1).
+  **(NOTICE / provenance / licensing is now its own dimension, EN5 — below.)**
+- **EN5 Provenance / Licensing** `[JUDGMENT]` — graded **2 / 3 / 5**; fail = `[Fail - Provenance /
+  Licensing]`, non-fail (score 3) = `[Non-Fail - Provenance / Licensing]`:
   ```bash
   N="$TASK/environment/NOTICE.md"; for k in license provenance sha256; do grep -qi "$k" "$N" || echo "NOTICE missing: $k"; done
   # every base image needs a CORRECT license line in the top-level NOTICE (BusyBox = GPL-2.0; a pin is not a license)
@@ -170,18 +240,16 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
     printf '%s: ' "$(basename "$w")"; unzip -p "$w" '*.dist-info/METADATA' | grep -m1 -E '^License(-Expression)?:' || echo '(see classifiers)'; done
   # NOTICE must carry the FULL METADATA license-expression (not truncated); first-party license = a token (Proprietary), never N/A
   grep -niE 'License[^:]*:[[:space:]]*(N/?A)?[[:space:]]*$|:[[:space:]]*N/A' "$N"   # review: empty / bare "N/A" entries
-  # report judge must fail-close: no `|| true` leaving a stale reward, no reward:null
-  grep -nE '\|\|[[:space:]]*true|"?reward"?[[:space:]]*:[[:space:]]*null' "$TASK/tests/test.sh"   # review each
   ```
-  **[JUDGMENT]** Replay fails (fresh security state per boot); hermetic runtime (no runtime
-  pip/apt/curl); the **scored value survives a service restart** (derived deterministically from a
-  persistent seed or on a named volume — never re-minted at random into a non-volume path); verifier/solver
-  retry budget ≥ the agent's **read as a chain** — the inner check's timeout (`check.py`
-  `command_succeeds`) > the retry/backoff budget of what it runs (`behavior.sh`), and `[verifier]
-  timeout_sec` > that inner check **+** the report-judge pass, or the verifier aborts a solve the agent
-  earned; the report judge targets an internal gateway only; the app itself and each service's own pip
-  deps (e.g. gateway Flask/gunicorn at the installed version) are licensed in NOTICE. A build-time
-  live-PyPI `pip install` is a hygiene nit, not an EN4 fail on its own (`guidelines.md` §8.1).
+  **[JUDGMENT]** Every **third-party** component — each base image, the app itself, each service's own pip
+  deps (e.g. gateway Flask/gunicorn at the installed version), and every vendored wheel (wheel license =
+  the **full METADATA expression**, not truncated; first-party = `Proprietary`, never `N/A`; BusyBox =
+  GPL-2.0) — must be correctly licensed. **V17 grades by *where* the attribution lives:** all in
+  `NOTICE.md` → **5**; a component **not** in `NOTICE.md` but **credited elsewhere in the task files** →
+  **3 Non-Fail** (the old "only the top-level NOTICE counts" auto-fail is relaxed); a component attributed
+  **nowhere**, **or** one that **cannot be legally used for commercial purposes** (a non-commercial /
+  restrictive license — *new V17 fail condition*) → **2 Fail**. First-party (self-written) code needs no
+  provenance.
 
 ---
 
@@ -242,7 +310,7 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
   use cannot retrieve the marker. `instruction_L0.md` resolves credentials (hands them over or states none
   are needed — silence also fails the platform's `tier_discoverability_contract`).
 - **VU5 Attack-Surface Breadth** `[LIVE]` **[JUDGMENT]** — fail = `[Fail - One-Trick Task]` / `[Fail -
-  Decoy Reaches Scored Secret]` / `[Fail - Fake or Stubbed Decoy]`:
+  Decoy Reaches Scored Secret]` / `[Non-Fail - Fake or Stubbed Decoy]` (score 3):
   - ≥3 genuinely probeable surfaces across **distinct** categories (one that access-denies on first contact,
     or a same-category variant, doesn't count).
   - Exactly one is scored, through multi-hop navigation; the rest were attempted and dead-end; no decoy
@@ -489,7 +557,7 @@ symptom cannot occur.
 ```
 PRE-SUBMISSION VERDICT: SHIP | NOT-YET
 Hard gates (A1–A7): <all green? yes/no>
-V13 scores: F1=_ F2=_ F3=_ F4=_ F5=_ EN1=_ EN2=_ EN3=_ EN4=_ VU1=_ VU2=_ VU3=_ VU4=_ VU5=_ TR2=_ TR3=_ EV1=_ EV2=_ EV5=_ RB1=_ Spam=_
+V13 scores: F1=_ F2=_ F3=_ F4=_ F5=_ EN1=_ EN2=_ EN3=_ EN4=_ EN5=_ VU1=_ VU2=_ VU3=_ VU4=_ VU5=_ TR2=_ TR3=_ EV1=_ EV2=_ EV5=_ RB1=_ Spam=_
 PR197 infra (N1–N6): <all green? list any FAIL or n/a>
 SOT items (S1–S8): <all pass? list any FAIL>
 Advisories (ADV1–ADV3): <list, or none>
@@ -499,6 +567,6 @@ WARN items (with judgment note): <list, or none>
 pass@5: <N>/5 behavior-solves, <M> non-errored, genuine non-solves: <list>, tier(s): <...>
 Top blockers to fix (owning file → V13 dim / SOT): <...>
 ```
-Ship only on `SHIP`: every §A green, all 21 V13 dimensions at 5, every S-item passing, zero FAIL, and
+Ship only on `SHIP`: every §A green, all 22 V13 dimensions at 5, every S-item passing, zero FAIL, and
 zero NOT-VERIFIED. Otherwise fix at the owning file and **re-walk** `taskworkflow.md` from the owning
 phase — any late source edit re-triggers A6.

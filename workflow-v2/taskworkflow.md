@@ -1,11 +1,11 @@
 # Deep Hack — Task Workflow (agent flow + line-by-line audit)
 
 The order you apply the rules in. Pairs with [`guidelines.md`](guidelines.md) (the rules + why + the QC
-dimension map). Aligned to the **V13 QC rubric** (21 dimensions; it wins over the PDF where they
+dimension map). Aligned to the **V13 QC rubric** (22 dimensions; it wins over the PDF where they
 disagree) and `guidelines-sot/` watermarked SOT PDF (change log through **Nov 10, 2026**, incl. the **Nov 4 attempter-role rework**) for everything V13
 doesn't score.
 
-**Tags** (same as `guidelines.md`): every QC ID is a **V13** dimension (F1–F5, EN1–EN4, VU1–VU5, TR2–TR3,
+**Tags** (same as `guidelines.md`): every QC ID is a **V13** dimension (F1–F5, EN1–EN5, VU1–VU5, TR2–TR3,
 EV1, EV2, EV5, RB1, Spam). **SOT** = required by the PDF/runners/platform QA but not a V13 score.
 **advisory** = reported below the V13 score table; the post-QC gate can still block on it. Translate any
 pre-V13 ID (F6, VU6, EV6, TR4, …) with the crosswalk in `guidelines.md` §10.2.
@@ -60,7 +60,7 @@ P2 Oracle + Noop   (./blackbox-pentest-checks/run-blackbox-pentest-checks.sh tas
       ├─ Noop  ≠ 0 ─► fix anti-cheat/isolation (TR2/EV1/EV2/EN2/VU1) ────────────►│  back to P1:
       │ both pass                                                                            │  re-audit any
       ▼                                                                                     │  file you
-P3 Quality Check   (blackbox-pentest-qa + V13 self-score, all 21 dims)                        │  touched, then
+P3 Quality Check   (blackbox-pentest-qa + V13 self-score, all 22 dims)                        │  touched, then
       ├─ any confirmed FAIL ─► fix (map to its QC dim) ──────────────────────►│  re-walk the
       │ clean (WARN = judgment)                                                              │  gates forward
       ▼                                                                                     │  (a late source
@@ -130,8 +130,8 @@ comments or notes — trace the code. A fail usually cross-fails another dimensi
   `solution/solve.sh`, `tests/test.sh`, `tests/isolation_test.sh`, non-empty `trajectories/oracle/` +
   `trajectories/noop/`, and `trajectories/pass@k/` with ≥3 non-errored trials, each holding
   `agent/trajectory.json` + `verifier/test-stdout.txt`. `solve.sh`/`test.sh`/`isolation_test.sh` need an
-  exec bit or a shebang. A missing isolation test, NOTICE, fresh_state, oracle or noop **also fails
-  EN4**, and a missing `fresh_state.json` also fails F5.
+  exec bit or a shebang. A missing isolation test, fresh_state, oracle or noop **also fails
+  EN4**; a missing `NOTICE.md` **also fails EN5**; and a missing `fresh_state.json` also fails F5.
 - **SOT extras** (required, not F1-scored): `environment/agent/vendor-wheels/`, `tests/reward.toml`,
   `tests/behavior/{behavior.sh, check.py}`, `tests/report/{rubric.toml, judge_prompt.md}`,
   `tests/stages/{rubric.toml, check.py}` (ship its runner too — `tests/stages/run_stages.sh`, mirroring the
@@ -177,7 +177,7 @@ comments or notes — trace the code. A fail usually cross-fails another dimensi
   `csrf_token` included; only L2 may. Check auto-generated surfaces (`/docs`, OpenAPI) too. → **VU3**; a
   comment-line hit is also narration → **F5**
 
-### 3.3 `environment/` (read every source file copied into the app image) → F2, F5, EN1–EN4, VU1–VU5, SOT
+### 3.3 `environment/` (read every source file copied into the app image) → F2, F5, EN1–EN5, VU1–VU5, SOT
 - `docker-compose.yaml`:
   - A service named **exactly `main`** = the agent sandbox, with **no `networks:` key** (PR #197 §1 — the
     sidecar owns `main`'s networking; a `networks:` key hard-fails `docker compose up` on Scale Sandbox).
@@ -248,10 +248,15 @@ comments or notes — trace the code. A fail usually cross-fails another dimensi
     **EN3/EN2**
 - `environment/agent/`: Dockerfile installs `harbor-rewardkit` from the committed `vendor-wheels/` (no
   build network); creates the non-root user and `USER`s to it (and `task.toml` declares it). → **F5/SOT**
-- Top-level `environment/NOTICE.md` (a nested one doesn't count): provenance + `sha256` pins + a
-  **correct** license for every base image (each `FROM` + compose `image:`), the app itself, every
-  vendored wheel (check its real `METADATA`), and each service's own pip deps at the installed version.
-  A digest pin is not a license; BusyBox is GPL-2.0. → **EN4 `Provenance / Licensing`**
+- Top-level `environment/NOTICE.md`: provenance + `sha256` pins + a
+  **correct** license for every third-party component — each base image (each `FROM` + compose `image:`),
+  the app itself, every vendored wheel (check its real `METADATA`), and each service's own pip deps at the
+  installed version. A digest pin is not a license; BusyBox is GPL-2.0. **V17 grades 2/3/5 by *where* the
+  attribution lives:** in `NOTICE.md` → **5**; not in `NOTICE.md` but credited **elsewhere in the task
+  files** → **3 Non-Fail** (no longer an auto-fail — the "only the top-level NOTICE counts" rule is
+  relaxed); attributed **nowhere**, **or** a component that **cannot be legally used for commercial
+  purposes** (a non-commercial/restrictive license — *new in V17*) → **2 Fail**. First-party code needs no
+  provenance. → **EN5 `Provenance / Licensing`**
 - Hermetic + deterministic: no **runtime** `pip`/`apt`/`curl`/`wget` of remote resources (the
   runtime sandbox is `no-network`). **Authoring best practice:** every Dockerfile's `pip install`
   runs `--no-index --find-links` against committed wheels; grep each Dockerfile for `pip install`
@@ -270,6 +275,9 @@ comments or notes — trace the code. A fail usually cross-fails another dimensi
   (`/logs/verifier/submission.txt`) — a file write, not stdout. → **TR3**
 - Recovers the secret through the **intended CWE path** (no shortcut: no config/env/seed read, no
   leftover copy, no side route). → **TR3**
+- **POSIX only** — the runner runs it as `sh /solution/solve.sh` (dash), ignoring the `#!/bin/bash`
+  shebang. No `<<<`, `${v:off:len}`, arrays or `[[`; `dash -n solution/solve.sh` must pass. A bash-ism
+  makes the oracle score 0 on the platform while passing under bash locally. → **SOT (oracle soundness)**
 - Also writes a sample `report.md` for the oracle's report side. Has the exec bit or a shebang. → **F1**
 
 ### 3.5 `tests/` → EV1, EV2, EN4, RB1, F1, SOT
@@ -334,6 +342,20 @@ section), and the **six determinism sources** (§6.6). Each one below maps to on
 ```
 ./blackbox-pentest-checks/run-blackbox-pentest-checks.sh task      # two fresh boots
 ```
+**This step is the real gate — it BUILDS every image, boots the stack, and runs `sh /solution/solve.sh` +
+`sh /tests/test.sh` (dash, NOT bash — the shebang is ignored).** A static self-audit cannot see what this
+catches, so it is **mandatory and non-skippable**; the oracle/noop evidence must be exactly what this runner
+writes — **never hand-write or hand-edit `test.log`/`reward.txt`** (a fabricated `oracle=1` whose image
+can't build is Overall Quality 1). Before running it:
+- `dash -n` **every** shipped `.sh` — a `<<<` here-string, `${v:off:len}` substring, array or `[[` fails to
+  parse under the runner's `sh` → the oracle never runs → a false 0 on the platform (even if it works under
+  bash locally). Use an `IFS`-newline `for` loop, `$(printf '%.Ns' "$v")`, `[ … ]`.
+- the **build must actually succeed**: no `|| true` on a `RUN` whose artifact a later stage `COPY`s (it
+  caches a binary-less layer → confusing `COPY … not found`); assert artifacts with `&& test -x <path>`; a
+  from-source `go build`/`npm` that fetches at build time is a hermeticity risk — vendor it offline.
+- `operator/` must be **mounted into `main` (root-owned, agent-unreadable) OR absent** — if it exists on
+  host but is unmounted the runner **FATALs** (`/operator empty`); a merged-`tests/` task ships no
+  `operator/` (and never expert probe scripts, which leak the chain).
 - **Oracle (SOT):** `solve.sh → submission.txt → test.sh` scores **exactly 1**; reward files + verifier
   output complete; `reward.json = {"reward":1}` (behavior-only).
 - **Noop (TR2):** garbage submission on a **separate fresh** boot (not the oracle container) scores
@@ -357,11 +379,11 @@ Read the report written **outside** `task/`. A clean automated report does **not
 (`tier_discoverability_contract`, `decoy_cross_path_isolation`, `safety_framing`, …) return `401` locally
 and **do not run**. A clean local report with those rows skipped is **not** clean.
 
-**Then self-score all 21 V13 dimensions** (`guidelines.md` §10), since that is what the auditor scores:
-- `cyber_quality_check` CLI (the `cyber-quality-check` skill): 19 of 21 dimensions. Its judged ones
+**Then self-score all 22 V13 dimensions** (`guidelines.md` §10), since that is what the auditor scores:
+- `cyber_quality_check` CLI (the `cyber-quality-check` skill): 19 of 22 dimensions. Its judged ones
   (F4, VU2, VU4, VU5, EV1, EV2, RB1, plus the judge stage of EN2/EN4/VU1/VU3/TR3) need a key.
 - **EN1** and **Spam Check** are never automated — judge them by hand.
-- Or run `manual-qc-audit` (V13, all 21, fail-closed). Do **not** use the global `qc-audit` skill, which
+- Or run `manual-qc-audit` (V13, all 22, fail-closed). Do **not** use the global `qc-audit` skill, which
   may carry the stale V10 rubric.
 
 Every dimension must reach **5**; F4's score-3 `Non-Fail` is still a ship-blocker. Record any advisory
@@ -410,7 +432,7 @@ Model Failure Reason, is NOT the attempter's — the reviewer writes it in Part 
 **Packaging** (verify **inside the final archive**, not the working folder):
 - Digest-pin every base image; `task.toml` declares `[agent] user` (non-root); no narration comment;
   valid `fresh_state.json`. → **F5**. `NOTICE.md` complete with correct per-image/app/wheel licenses →
-  **EN4**. Ceilings + agent installs from `vendor-wheels/` → **SOT**.
+  **EN5**. Ceilings + agent installs from `vendor-wheels/` → **SOT**.
 - `main` has no escape-grade privilege; no static host port / static subnet → **F2/EN2**; no `NO_PROXY`
   → **VU3/EN3**.
 - Any custom **agent image** ships **both `tmux` and `asciinema`** (+ `procps ca-certificates`) baked in
@@ -438,7 +460,7 @@ Model Failure Reason, is NOT the attempter's — the reviewer writes it in Part 
   Re-`chmod 755` after editing any bind-mounted script (the editor drops the exec bit), and invoke
   `db`-style entrypoints as `entrypoint: [/bin/sh, /x-entrypoint.sh]` so a lost bit can't break the boot.
 
-**Final ship checklist (ship bar = all 21 V13 dimensions at 5, every SOT rule met, no blocking advisory;
+**Final ship checklist (ship bar = all 22 V13 dimensions at 5, every SOT rule met, no blocking advisory;
 `guidelines.md` §10):**
 - [ ] The V13 F1 file list is present/parseable/executable, including pass@k with ≥3 non-errored trials
   (`trajectory.json` + `test-stdout.txt`); SOT extras (`tests/{behavior,report,stages}/`,
@@ -583,7 +605,7 @@ re-walk, else **DONE**.
 | cpus omitted, or `2.0` kills all trials on a 1-CPU host | §3.1 `task.toml` — declare cpus; confirm host value with batch owner | §N6, SOT (PR #197 §6) |
 | Ships `NO_PROXY` | §3.3 compose | VU3, EN3 |
 | Unpinned image / narration in agent tree / `[agent] user` not declared | §3.1 / §3.3 | F5, EN4 |
-| NOTICE.md missing/wrong license (image, app, wheel, gateway dep) | §3.3 | EN4 |
+| NOTICE.md missing/wrong license (image, app, wheel, gateway dep) | §3.3 | EN5 |
 | No ceiling / no vendor wheels | §3.1 / §3.3 | SOT |
 | Staged rubric credits from narration, collapses, or gates reward | §3.5 stages | RB1 |
 | Blank marker per boot | §3.3 secret wiring | VU1 |
@@ -613,7 +635,7 @@ re-walk, else **DONE**.
 6. **Reconcile a behavior change across all ~8 artifacts in one pass** (all three tiers + `task.toml` +
    solve + source + catalog/report-rubric + unintended/fresh_state); piecemeal =
    `tier_discoverability`/F4/VU3 fail. Run the reconciliation grep in gl §8.1.
-7. **The LLM-judge QC rows need an API key** — run the checker with one, or self-score all 21 V13
+7. **The LLM-judge QC rows need an API key** — run the checker with one, or self-score all 22 V13
    dimensions with `manual-qc-audit` (not the stale V10 `qc-audit`), before shipping; a local report with
    those rows `401`-skipped is not clean. And **normalize perms to `755`/`644`** — a `700`/`600` tree makes
    the oracle fail to boot under the non-root agent.

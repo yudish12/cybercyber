@@ -805,3 +805,22 @@ md5/version AT audit time** — the live URL is the fixed bundle; only the writt
   inconsistent grader; that half is a QC-process / rubric calibration fix, separate from this skill.
 - **U6** — the 5 `bad` rows WITHOUT detailed reasons (727683, 84281, the second 72768b row, 8427f ×2) could not be
   diagnosed: no reason text, and the URLs now serve repaired artifacts.
+
+## Determination 2026-11-17 — VU3 scope: task-authored gateway/harness source (supersedes "harness comment = Tier B / QC PASS 10")
+
+- **Case:** `jiro/image-cache-deception` (CWE-639 / CVE-2025-57752). A QC review failed VU3 on the gateway source
+  carrying the scored mechanism in **comments and identifiers** — `cache-poisoning` docstrings, `prime_snapshot_cache`,
+  a `DATA_PACK`/technique label naming the cache-key-confusion class — even though none is agent-reachable (the gateway
+  source is in a separate container, not served, and the one diag route that echoes the technique label is
+  verifier-token-gated → 404 to the agent).
+- **Ruling:** VALID VU3 fail. Task-authored source under `environment/**` that **narrates the scored class or
+  mechanism** — gateway / proxy / verifier / init / harness, **comments AND identifiers** — is Tier A
+  `[Fail - Vulnerability Leakage]` whether or not the agent can reach it. Strip to neutral, effect-named tokens
+  (`warm_snapshot_copy`, `attestation_via_disclosed_snapshot`, "serves the stored image without re-checking
+  authorization"). This **supersedes** the earlier "harness/gateway COMMENTS the agent cannot reach remain Tier B (i),
+  QC PASS 10" reading (SKILL §VU3, policy_v13e 10(a), workflow doc-inconsistencies jiro note).
+- **Still exempt** (must name the class to function): `instruction_L2`; the top-level `NOTICE.md` provenance line (CVE id
+  + upstream CWE); and report-grading criteria (`tests/report/rubric.toml`, `operator/report-rubric.json`).
+- **Still not task narration:** unmodified upstream vendor code naming *other* (non-scored) classes in its own security
+  comments, and a generic identifier that merely contains a word like `cache` for an app's own unrelated feature
+  (a client API-response cache, a permission-check cache).

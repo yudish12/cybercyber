@@ -1,0 +1,7 @@
+[fix_probe] building + booting the CORRECTED variant (DSPROXY_EXACT_HOST_MATCH=1)...
+[fix_probe] OK: 'http://svc-c2.obs.internal' is blocked by the corrected guard (exploit dies)
+[fix_probe] OK: 'http://svc-c2.obs.internal.' is blocked by the corrected guard (exploit dies)
+[fix_probe] OK: 'http://127.0.0.1' is blocked by the corrected guard (exploit dies)
+[fix_probe] OK: 'http://169.254.169.254' is blocked by the corrected guard (exploit dies)
+[fix_probe] OK: whitelisted Graphite still reachable (200) — legit behavior survives
+[fix_probe] PASS — the loose-match is the whole vulnerability

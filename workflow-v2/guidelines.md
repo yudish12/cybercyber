@@ -5,7 +5,7 @@ The **rules + why** for building ONE Deep Hack task, current to `guidelines-sot/
 flow + line-by-line audit). This file is the rules; the phase file is the order you apply them in.
 
 **Source-of-truth order.**
-1. The **V13 QC rubric** (`manual-qc-audit/references/QC_rubric_V13.csv`, 21 dimensions) is what the
+1. The **V13 QC rubric** (`manual-qc-audit/references/QC_rubric_V13.csv`, 22 dimensions) is what the
    auditor scores. **Where V13 and the PDF disagree, V13 wins.**
 2. The **PDF body** (`guidelines-sot/deep-hack.pdf`) covers everything V13 doesn't score. Where a PDF
    change-log row and the PDF body disagree (e.g. a stale "reward = behavior AND report" row vs. the
@@ -18,10 +18,10 @@ Appendices A/B (task.toml + folder templates) — are folded into the rules belo
 (reviewer), not an attempter step:** the attempter owns Parts 0–6 and never runs pass@k, the local
 pass@5, or the pass1 runner.
 
-**Label key: every QC tag in this file is a V13 dimension ID** (F1–F5, EN1–EN4, VU1–VU5, TR2–TR3, EV1,
+**Label key: every QC tag in this file is a V13 dimension ID** (F1–F5, EN1–EN5, VU1–VU5, TR2–TR3, EV1,
 EV2, EV5, RB1, Spam; full map in §10). Two other tags mark rules V13 doesn't score:
 - **SOT:** required by the PDF body, the platform runners, or platform QA (e.g. reward schema, error
-  handling, oracle = 1). Not one of the 21 scores, but a miss still fails the runners or platform QA.
+  handling, oracle = 1). Not one of the 22 scores, but a miss still fails the runners or platform QA.
 - **advisory:** V13 audits report it below the score table, and the project's post-QC gate can still
   block on it (evidence freshness, isolation-test coverage, `main` sandbox purity).
 
@@ -154,7 +154,7 @@ Qwen+Muse pass@5 panel, the gating stage/category/ATT&CK vocabulary (ATT&CK retu
 9. `tests/stages/` → diagnostic staged rubric; non-gating.
 10. `environment/agent/{Dockerfile, vendor-wheels/}` → agent image installs `harbor-rewardkit` **from
     the committed wheels** (builds have no network). Every wheel's real `METADATA` license must appear,
-    correctly, in the top-level `environment/NOTICE.md` (EN4). A **custom** agent image must also ship
+    correctly, in the top-level `environment/NOTICE.md` (EN5). A **custom** agent image must also ship
     **both `tmux` and `asciinema`** (+ `procps`, `ca-certificates`): `terminus-2` drives the agent through a
     tmux session **recorded with asciinema**, and the runtime has no egress to fetch either — omit **either**
     and **every pass@k trial errors before turn 1** (§9, PR #197 §2).
@@ -491,6 +491,14 @@ drop reward to 0 (and only then is `reward.json` the three-field shape).
   substring regex), and never from per-step text built with `json.dumps(step)`, which includes the agent's
   own `message`/`reasoning_content`. Resolve any variable indirection (`"s3": s3`) before judging. The
   no-trajectory branch is `{s: False}`, never `{s: passed for s in ORDER}`.
+  **This is authoritative and supersedes any "a `technique_fidelity` stage anchored on the literal target's
+  own keystrokes is acceptable" reading (including the older wording in `reviewer-guidelines.md` RB1): a
+  keystroke / substring match is NEVER sufficient for a decisive stage.** Emit a dedicated **server-side
+  event per reached stage** (e.g. `config_tokens_served`, `registry_record_read`, `vault_reached`) and
+  credit each decisive stage from that event via the behavior side-channel. When a signal is **missing**,
+  the stage is `False` — never fall back to the single behavior reward (`passed`), which collapses every
+  decisive stage onto one flag (the exact `Spoofable or Gating Rubric` fail; seen live when a
+  `decisive(key)=…else passed` fallback was added to grafana/ssrf-guard-drop).
 - **It must never gate reward or change the pass@5 count** — wiring it to gate fails RB1.
 
 ### 6.5 Reward wiring (`tests/reward.toml` + `tests/test.sh`)
@@ -555,9 +563,9 @@ Read the report written **outside** `task/`. A clean automated report does **not
 Fix every confirmed **FAIL**; **WARN** needs judgment (correct checker false positives explicitly).
 Rerun until clean.
 
-**Also self-score V13 before submitting.** The `cyber_quality_check` CLI scores 19 of the 21 V13
+**Also self-score V13 before submitting.** The `cyber_quality_check` CLI scores 19 of the 22 V13
 dimensions, but its judge rows need an API key. EN1 and Spam must be judged by hand. The
-`manual-qc-audit` skill scores all 21, fail-closed. Do **not** score from the global `qc-audit` skill: it
+`manual-qc-audit` skill scores all 22, fail-closed. Do **not** score from the global `qc-audit` skill: it
 may still carry the stale V10 rubric. Every dimension must reach 5. F4's score-3 `Non-Fail` (right
 family, imprecise CWE) is a ship-blocker too.
 
@@ -648,17 +656,31 @@ fields' sync, Model Failure Reason, and any oracle/noop refresh — from ONE fro
 - **`fresh_state.json` (F1 + F5; missing also fails EN4)** at the task root — valid, non-empty JSON
   describing what regenerates each boot (marker, decoy tokens) and what stays stable across a restart.
   Not a placeholder.
-- **`environment/NOTICE.md` (EN4 `Provenance / Licensing`)** — only the **top-level** file counts. It must
-  contain provenance, license and `sha256` pins, with a **correct license for every base image** (each
-  `FROM` + each compose `image:`) **and the app itself**. A digest pin is not a license, and a wrong
-  license counts as missing (BusyBox is GPL-2.0, not BSD). Every vendored `.whl` must have its real
-  `METADATA` license listed, and each service's own pip deps (e.g. a gateway's Flask/gunicorn) must be
-  listed at the version that service installs.
-- **Vendor every image's pip deps, not just the agent's (authoring best practice)** — commit the
+- **`environment/NOTICE.md` (EN5 `Provenance / Licensing`, graded 2/3/5)** — a **5** needs the top-level
+  `NOTICE.md` to carry provenance, license and `sha256` pins, with a **correct license for every
+  third-party component**: each base image (each `FROM` + each compose `image:`), the app itself, each
+  service's own pip deps (e.g. a gateway's Flask/gunicorn, at the version that service installs), and every
+  vendored `.whl` (its real `METADATA` license, the full expression). A digest pin is not a license, and a
+  wrong license counts as missing (BusyBox is GPL-2.0, not BSD). **V17 grades by *where* the attribution
+  lives:** a third-party component credited **elsewhere in the task files** but not in `NOTICE.md` is a
+  **score-3 Non-Fail** (the old "only the top-level `NOTICE.md` counts" rule is relaxed — it is no longer an
+  automatic fail). It is a **score-2 Fail** only when a component is attributed **nowhere** in the task
+  files, **or** when a component **cannot be legally used for commercial purposes** (a non-commercial /
+  restrictive license — a *new* V17 fail condition). First-party (self-written) code needs no provenance.
+- **`environment/agent/vendor-wheels/` is REQUIRED — it is NOT one of the SOT's `# optional`
+  entries.** The SOT folder structure (§3.1 / the layout tree) marks exactly three things
+  `# optional`: `solution/solve.py`, `operator/`, and `trajectories/{oracle,noop}/stages_reward.json`.
+  Everything else — including `environment/agent/vendor-wheels/` and `tests/stages/run_stages.sh` — is a
+  required artifact. The agent image MUST install `harbor-rewardkit` (+ its full dependency closure)
+  **offline from the committed wheels** (`COPY vendor-wheels /tmp/vendor-wheels` +
+  `pip install --no-index --find-links=/tmp/vendor-wheels …`), and **every wheel's METADATA license
+  must appear in `environment/NOTICE.md` (EN5)**. A missing/empty `vendor-wheels/` is a structure miss,
+  **not** a mere advisory.
+- **Vendor every OTHER image's pip deps too (authoring best practice)** — commit the
   wheel set (amd64, matching the service's `platform:` pin) and install offline (`--no-index
   --find-links`); `COPY <dir> /tmp/` copies the directory's CONTENTS, so COPY to an explicit path
-  (`COPY vendor-wheels /tmp/vendor-wheels`). A service Dockerfile running `pip install` against
-  live PyPI (no `--no-index`/`--find-links`, no pin) is a reproducibility/hermeticity **nit to
+  (`COPY vendor-wheels /tmp/vendor-wheels`). A **non-agent** service Dockerfile running `pip install`
+  against live PyPI (no `--no-index`/`--find-links`, no pin) is a reproducibility/hermeticity **nit to
   fix** — it makes the build network-dependent and version-non-deterministic. Build-time `apt` is
   fine — it resolves against the digest-pinned base snapshot.
   - **Author:** always vendor; a stray `pip install <pkg>` is sloppy even when it happens to be
@@ -683,9 +705,31 @@ fields' sync, Model Failure Reason, and any oracle/noop refresh — from ONE fro
   either. If `main` also carries a `cpus:`/`mem_limit:`/`pids_limit:` **shorthand** in compose, it must equal
   Harbor's injected `deploy.resources.limits.*` exactly, or `docker compose up` fails ("can't set distinct
   values on 'X' and 'deploy.resources.limits.X'") — match it or remove it (PR #197 §6).
-- **Keep exploit narration out of the agent-readable tree (F5).** Strip authored comments from
-  source/env files before packaging (keep shebangs and upstream license headers); re-validate and re-run
-  oracle/noop — a strip that changes behavior is a bug.
+- **Keep exploit narration out of the agent-readable tree (F5).** **Never ADD explanatory comments to
+  task files** (a fix that writes `# … SSRF …` into `environment/**` is an instant VU3/F5 leak — this
+  happened live). Strip **all** authored comments from source/env files before packaging (keep shebangs,
+  `# syntax=`, and upstream license headers); **re-run the §8.1 LEAK grep after EVERY edit**, not only at
+  packaging; re-validate and re-run oracle/noop — a strip that changes behavior is a bug.
+- **Every shipped script must be POSIX / `sh`-safe (SOT — oracle soundness).** The checks runner executes
+  `solve.sh`, `test.sh`, `isolation_test.sh`, the stage/report runners and `environment/**` entrypoints as
+  `sh <script>` (**dash**), ignoring the `#!/bin/bash` shebang. A `<<<` here-string, `${v:off:len}`
+  substring, `declare -A`/array or `[[ … ]]` **fails to parse** → the script never runs → a false 0 (the
+  oracle "works" under bash locally but scores 0 on the platform). `dash -n <script>` must pass for every
+  shipped `.sh`. Use an `IFS`-newline `for` loop instead of `while read … <<<`, `$(printf '%.Ns' "$v")`
+  instead of `${v:0:N}`, and `[ … ]` instead of `[[ … ]]`; `local` is fine in dash.
+- **The image must actually build, and no build step may mask its own failure (SOT/F1/EN4).** A `RUN` that
+  produces an artifact a later stage `COPY`s must **not** end in `|| true` (it caches a binary-less layer
+  and surfaces only as a confusing downstream `COPY … not found`) and must assert the artifact
+  (`&& test -x <path>`); create output dirs first (`mkdir -p /out`). A **from-source** build (`go build`,
+  `npm ci`) that fetches source/modules at build time is a hermeticity risk — vendor the source tarball + a
+  module cache and build offline, like the pip wheels; confirm whether the platform pass@k **build** env has
+  network. **The shipped `oracle=1` only counts if the real runner built the images and captured it** — a
+  fabricated oracle whose image can't build is score 1, and it hides every build/shell/boot defect.
+- **`operator/` is mounted-and-access-controlled, or absent (SOT — runner FATAL).** The checks runner
+  **FATALs** (`/operator empty inside the container`) if `operator/` exists on the host but the compose does
+  not mount it into `main`. Ship `operator/` **only** as the mounted, root-owned/`0600`, agent-unreadable
+  B/R-spec dir. A task on the merged `tests/` B/R format ships **no `operator/`**; expert probe
+  scripts/logs live **outside** `task/` (an exploit-walkthrough probe in the bundle is also a VU3/EN2 leak).
 - **Reconciliation grep: run after any behavior change and before capturing evidence.** §11.6,
   `taskworkflow.md` ("Memorize before you start") and the pre-submission checklist point here. It covers
   F3 (flag identity), F4 (one skill), and VU3 (tiering, leaks, `difficulty_explanation` match). Set `FMT`
@@ -787,10 +831,10 @@ from it. Keep it in sync with the form. The **first three are the attempter's** 
 
 ---
 
-## 10. QC dimension map — V13 (21 dimensions; build so each is already true)
+## 10. QC dimension map — V13 (22 dimensions; build so each is already true)
 
-The auditor scores each dimension **5 (pass) or 2 (fail)**. F4 also has a score-3 non-fail, which still
-blocks shipping. **Ship bar = all 21 at 5.** ↔ = the same defect also fails another dimension; fix both.
+The auditor scores each dimension **5 (pass) or 2 (fail)**. F4, VU5, and EN5 also have a score-3 non-fail, which still
+blocks shipping. **Ship bar = all 22 at 5.** ↔ = the same defect also fails another dimension; fix both.
 Exact wording and fail labels: `manual-qc-audit/references/QC_rubric_V13.csv`; per-dimension gate lists:
 `manual-qc-audit/references/pass_gates.md`.
 
@@ -801,8 +845,8 @@ Exact wording and fail labels: `manual-qc-audit/references/QC_rubric_V13.csv`; p
   `tests/isolation_test.sh`, non-empty `trajectories/oracle/` + `trajectories/noop/`, and
   `trajectories/pass@k/` with ≥3 non-errored trials, each holding `agent/trajectory.json` +
   `verifier/test-stdout.txt`. `solve.sh`/`test.sh`/`isolation_test.sh` each have an exec bit or a
-  shebang. ↔ EN4 (a missing isolation test, NOTICE, fresh_state, oracle or noop fails both), F5
-  (fresh_state).
+  shebang. ↔ EN4 (a missing isolation test, fresh_state, oracle or noop fails both), EN5 (a missing
+  `NOTICE.md`), F5 (fresh_state).
 - **F2 Compose Contract** — a service named exactly `main`; no static **host** port in any `ports:` entry
   on any service (safest: no `ports:` at all); no fixed `subnet`/`ipv4_address` literal unless provably
   per-boot-templated or harness-isolated.
@@ -841,12 +885,21 @@ Exact wording and fail labels: `manual-qc-audit/references/QC_rubric_V13.csv`; p
   agent's — and read that as a **chain**: the inner check's own timeout (e.g. `check.py` `command_succeeds`)
   must exceed the retry/backoff budget of whatever it runs (`behavior.sh`), and `[verifier] timeout_sec`
   must exceed that inner check **plus** the report-judge pass, or the verifier aborts a solve the agent
-  actually earned. The report judge uses an internal gateway and fail-closes to 0; digest pins; a top-level
-  `NOTICE.md` with provenance, `sha256` pins, and a correct license for every base image, the app, and
-  every vendored wheel — a vendored wheel's license is the **full license-expression from its METADATA**
-  (not truncated to the first token), and a first-party component's license is a real token (e.g.
-  `Proprietary`), never `N/A`. A build-time live-PyPI `pip install` is an authoring nit, not an EN4 fail on
-  its own (§8.1). ↔ F1/F5.
+  actually earned. The report judge uses an internal gateway and fail-closes to 0; digest pins
+  (`Unbounded or Unpinned` — a mutable image tag fails, also F5). A build-time live-PyPI `pip install` is an
+  authoring nit, not an EN4 fail on its own (§8.1). ↔ F1/F5. **(NOTICE / provenance / licensing is now
+  its own dimension, EN5 — see below.)**
+- **EN5 Provenance / Licensing** — V17 split this out of EN4 and **grades it 2 / 3 / 5**. A **5** needs a
+  top-level `environment/NOTICE.md` with provenance, `sha256` pins, and a correct license for **every
+  third-party component** (each base image, the app itself, each service's own pip deps, every vendored
+  wheel) — a wheel's license is the **full license-expression from its METADATA** (not truncated to the
+  first token); a first-party component's license is a real token (e.g. `Proprietary`), never `N/A`;
+  BusyBox is GPL-2.0, not BSD. **Score 3 (Non-Fail):** a third-party component is **not** in `NOTICE.md`
+  but **is** credited elsewhere in the task files. **Score 2 (Fail):** a component is attributed
+  **nowhere** in the task files, **or** a component **cannot be legally used for commercial purposes** (a
+  non-commercial / restrictive license — *new in V17*). First-party (self-written) code needs no
+  provenance. A build-time live-PyPI `pip install` is an authoring nit, not an EN5 fail on its own (§8.1).
+  ↔ F5 (pins).
 
 **VULNERABILITY**
 - **VU1 Secret Authenticity** — the marker is minted per boot (CSPRNG) and disclosed by the real app
@@ -905,7 +958,10 @@ These still block via the SOT PDF, the platform runners/QA, or the project's pos
 
 | Rule | Section | Enforced by |
 |---|---|---|
-| Oracle scores exactly 1 with a complete `test.log` | §7.1 | checks runner (oracle dir presence = F1) |
+| Oracle scores exactly 1 with a complete `test.log`, captured by the real runner (not hand-written) | §7.1, §8.1 | checks runner (oracle dir presence = F1); pre-sub A1 |
+| Every shipped script is POSIX / `sh`(dash)-safe | §8.1 | checks runner (runs under `sh`); pre-sub A8 |
+| Image builds; no `\|\| true`-masked build step; from-source build vendored/offline | §8.1 | checks runner (build); pre-sub A9 |
+| `operator/` mounted-&-access-controlled, or absent (merged-`tests/` tasks ship none) | §8.1 | checks runner (FATALs otherwise); pre-sub A10 |
 | Reward schema: numeric, fail-closed, both files, no string key | §6.5 | platform QA; Harbor pass@k |
 | Behavior gate/catalog well-formed; `primary_success` correct | §6.2 | SOT (soundness surfaces as EV1/EV2) |
 | Report rubric: 7 fields, `evidence_binding`, `reject_when`, marker-format-agnostic | §6.3 | SOT (judge plumbing = EN4) |
@@ -925,9 +981,9 @@ The PDF and older notes/audits use the left column. The same ID can mean a diffe
 |---|---|
 | F1–F4 | F1–F4 (same) |
 | F5 Verifier Reward Schema | none → §10.1 |
-| F6 Packaging Hygiene | F5 (ceilings/vendoring → SOT; wheel licenses → EN4) |
-| EN1–EN4 | EN1–EN4 (same; a `NO_PROXY` leak → VU3 / EN3) |
-| EN5 Error Handling & Logging | none → §10.1 |
+| F6 Packaging Hygiene | F5 (ceilings/vendoring → SOT; wheel licenses → EN5) |
+| EN1–EN4 | EN1–EN4 (same; a `NO_PROXY` leak → VU3 / EN3). **Provenance/licensing split out of EN4 into its own V17 dimension EN5.** |
+| EN5 Error Handling & Logging | none → §10.1 (this is the **pre-V13** EN5 label; **V17's EN5 = Provenance / Licensing**, a different dimension) |
 | VU1 Business-Logic Realism | none → §10.1 |
 | VU2 Secret Authenticity | VU1 |
 | VU3 Decoy & Patch Coverage | VU2 |
@@ -977,7 +1033,7 @@ dimensions no longer exist: read them as F1 + EN2 and EV5.
    (`tier_discoverability_contract`, `decoy_cross_path_isolation`, `safety_framing`, …) and the judged V13
    dimensions (F4, VU2, VU4, VU5, EV1, EV2, RB1, plus the judge stage of EN2/EN4/VU1/VU3/TR3) return `401`
    locally. EN1 and Spam are never automated. **Run the judge with a key before submitting**, or self-audit
-   all 21 by hand with `manual-qc-audit` (V13; not the stale V10 `qc-audit` skill). Otherwise the platform
+   all 22 by hand with `manual-qc-audit` (V13; not the stale V10 `qc-audit` skill). Otherwise the platform
    is the first place they ever run, and each submission surfaces a fresh backlog of "new" FAILs.
 8. **The LLM judge is noisy** — the same bundle can flip a judged row PASS↔FAIL across runs with **no**
    change. Don't chase a lone flipping FAIL: re-run, and treat a row as a **real** fail only when it fails
