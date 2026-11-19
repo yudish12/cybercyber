@@ -1,0 +1,45 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1 }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "title": "Request rate (synthetic)",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" }, "refId": "A", "scenarioId": "random_walk", "seriesCount": 3, "alias": "svc-$seriesIndex" }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 80 } ] }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 0 },
+      "id": 2,
+      "options": { "colorMode": "value", "graphMode": "area", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "title": "Current load",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" }, "refId": "A", "scenarioId": "random_walk", "seriesCount": 1 }
+      ]
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["ops", "overview"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Service Overview",
+  "uid": "service-overview",
+  "version": 1,
+  "weekStart": ""
+}

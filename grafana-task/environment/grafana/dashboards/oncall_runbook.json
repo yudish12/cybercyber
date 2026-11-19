@@ -1,0 +1,40 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "mode": "markdown", "content": "## SRE On-call Runbook\n\n- Dashboards and datasources for the Platform Engineering estate live in the **Ops** folder.\n- Monitoring stack: Prometheus (`metrics.obs.internal`), Loki (`logs.obs.internal`).\n- Escalation: page the primary on-call, then the secondary after 15m.\n" },
+      "title": "Runbook",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 7 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "title": "Error budget burn",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" }, "refId": "A", "scenarioId": "random_walk", "seriesCount": 2, "alias": "svc-$seriesIndex" }
+      ]
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["ops", "oncall"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "On-call Runbook",
+  "uid": "oncall-runbook",
+  "version": 1,
+  "weekStart": ""
+}

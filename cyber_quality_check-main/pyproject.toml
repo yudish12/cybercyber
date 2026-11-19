@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyber-quality-check"
+version = "0.1.0"
+description = "QC checks for Harbor cybersecurity task packages against the V11 rubric"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6"]
+
+[project.scripts]
+cyber-quality-check = "cyber_quality_check.cli:main"
+
+[tool.setuptools]
+packages = ["cyber_quality_check", "cyber_quality_check.checks"]
+
+[tool.setuptools.package-data]
+cyber_quality_check = ["reference/*.csv"]

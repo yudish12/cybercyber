@@ -1,0 +1,2 @@
+[blackbox-pentest-checks] === Noop: garbage submission, no exploit attempted ===
+HARBOR_SCHEMA_ERROR: reward.json is not valid JSON: Expecting value: line 1 column 2 (char 1)
