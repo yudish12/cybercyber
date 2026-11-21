@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+rb1_finder.py  --  static FINDER layer of the RB1 eval
+(Evaluation: Staged-Rubric Quality).
+
+READ-ONLY. It POINTS; the reader decides. RB1 is heavily semantic, so the finder
+is mostly coverage + signals:
+
+  * FP-KILLER: confirm tests/stages/rubric.toml and the stage code EXIST and are
+    readable, with paths. The documented RB1 false positive is a judge that never
+    received tests/stages/ and so reports "rubric.toml not present". The finder
+    records the real path so that verdict is refutable with a citation.
+  * intended-path modeled: parse the staged rubric; there must be a
+    technique_fidelity/outcome stage on the scored step. A process-only rubric is a
+    candidate for [Fail - Intended-Path Not Modeled].
+  * spoofable signals: stage code that reads the report/trajectory/narration text, or
+    does whole-trajectory substring credit, is SURFACED for the reader. It is NOT
+    auto-failed -- a comment that says narration is NOT used must be cleared by reading.
+  * reward gating: reward wiring that derives the OFFICIAL reward from the rubric/stage
+    score is surfaced ([Fail - Spoofable or Gating Rubric], gating half).
+
+Usage:  python3 -I rb1_finder.py <task_dir> [--json OUT]
+"""
+import os, re, sys, json, io
+
+_NARRATION_RE = re.compile(
+    r"report\.md|report_text|\btrajectory\b|transcript|narration|\.pane\b|stdout|agent[_-]?output", re.I)
+_SUBSTRING_CREDIT_RE = re.compile(
+    r"in\s+open\(|\.read\(\)|[\"'][^\"']+[\"']\s+in\s+\w*(report|trajectory|transcript|text|output)"
+    r"|\bin\s+(trajectory|transcript|report)\b", re.I)
+_GATE_RE = re.compile(
+    r"reward\s*=\s*\$?\{?score|reward\b.*\b(stage|rubric)\b|\bscore\s*=.*run_stages"
+    r"|reward\.(txt|json).*\$?\{?score", re.I)
+_PY = (".py",)
+
+# -- flag-set extraction for subset/cross-reference prerequisite-collapse (below) --
+_FLAG_RE = re.compile(r'f\(\s*["\']([A-Za-z_][A-Za-z0-9_.]*)["\']\s*\)')
+_BARE_IDENT_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+_STAGE_NUM_RE = re.compile(r'st(?:age)?_?(\d+)', re.I)
+
+
+def _read(p):
+    try:
+        with io.open(p, "r", encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except Exception:
+        return ""
+
+
+def _stage_files(task_dir):
+    """All stage/behavior python + the stage shell runners."""
+    out = []
+    for sub in ("tests/stages", "tests/behavior", "tests/report"):
+        d = os.path.join(task_dir, sub)
+        if not os.path.isdir(d):
+            continue
+        for fn in sorted(os.listdir(d)):
+            full = os.path.join(d, fn)
+            if os.path.isfile(full) and (fn.endswith(_PY) or fn.endswith(".sh")):
+                out.append(os.path.relpath(full, task_dir))
+    return out
+
+
+def _find_rubric(task_dir):
+    p = os.path.join(task_dir, "tests", "stages", "rubric.toml")
+    present = os.path.exists(p)
+    return {"present": present, "path": "tests/stages/rubric.toml" if present else None,
+            "abs": p if present else None}
+
+
+def _parse_stages(task_dir, rubric):
+    if not rubric["present"]:
+        return []
+    text = _read(rubric["abs"])
+    stages = []
+    try:
+        import tomllib
+        data = tomllib.loads(text)
+        for s in data.get("stage", []):
+            stages.append({"id": s.get("id") or s.get("stage_name"),
+                           "category": (s.get("category") or "").lower(),
+                           "weight": s.get("weight"),
+                           "criterion": s.get("criterion", "")})
+    except Exception:
+        # regex fallback
+        for blk in re.split(r"\[\[stage\]\]", text)[1:]:
+            idm = re.search(r'id\s*=\s*"([^"]+)"', blk)
+            cm = re.search(r'category\s*=\s*"([^"]+)"', blk)
+            crm = re.search(r'criterion\s*=\s*"([^"]*)"', blk)
+            stages.append({"id": idm.group(1) if idm else None,
+                           "category": (cm.group(1).lower() if cm else ""),
+                           "weight": None,
+                           "criterion": crm.group(1) if crm else ""})
+    return stages
+
+
+def _intended_path(stages):
+    cats = sorted({s["category"] for s in stages if s["category"]})
+    modeled = any(c in ("technique_fidelity", "outcome") for c in cats)
+    cands = []
+    if stages and not modeled:
+        cands.append({"issue": "no technique_fidelity/outcome stage — a solving and a "
+                               "non-solving trial may be indistinguishable on the scored step",
+                      "categories": cats})
+    if not stages:
+        cands.append({"issue": "no parseable [[stage]] entries in the staged rubric"})
+    return {"label": "[Fail - Intended-Path Not Modeled]", "modeled": modeled,
+            "categories": cats, "candidates": cands}
+
+
+def _prereq_collapse(task_dir, files):
+    """Prerequisite-collapse: >=2 distinct stages crediting the IDENTICAL expression/flag, so a
+    later stage has no evidence of its own and collapses onto an earlier one. Parses stage dicts
+    like  "stN": <expr>  in the stage code."""
+    out = []
+    for rel in files:
+        if not rel.endswith(_PY):
+            continue
+        byexpr = {}
+        for i, line in enumerate(_read(os.path.join(task_dir, rel)).splitlines(), 1):
+            m = re.match(r'\s*["\'](st\d+|[a-z_]+)["\']\s*:\s*(.+?),?\s*$', line)
+            if not m:
+                continue
+            expr = m.group(2).strip().rstrip(",")
+            if expr in ("True", "False", "recon", "passed", "") or len(expr) < 4:
+                continue
+            byexpr.setdefault(expr, []).append((m.group(1), i))
+        for expr, hits in byexpr.items():
+            if len(hits) >= 2:
+                out.append({"file": rel, "line": hits[-1][1],
+                            "stages": [h[0] for h in hits], "expr": expr[:80],
+                            "why": f"stages {', '.join(h[0] for h in hits)} all credit the identical expression "
+                                   f"{expr[:60]!r} — prerequisite-collapse, the later stage has no independent evidence"})
+    return out
+
+
+def _flags_in(text):
+    return set(_FLAG_RE.findall(text or ""))
+
+
+def _resolve_var_flags(full_text, name, _depth=0):
+    """Best-effort ONE-level indirection resolver: a stage dict value that is a bare
+    identifier (e.g. "st1": recon) is not itself a credit expression -- it is computed
+    on an earlier line (recon = any_step(...) or f("x") or f("y")). Finds that
+    assignment and returns the set of f("flag") references inside its defining block,
+    so an OR/AND-chain hidden behind a variable is still visible to the collapse
+    checks below. Does not chase further indirection (one level is enough to surface
+    the real-world pattern; a reader confirms anything deeper)."""
+    if _depth > 1:
+        return set()
+    m = re.search(r'(?m)^([ \t]*)' + re.escape(name) + r'\s*=\s*', full_text)
+    if not m:
+        return set()
+    indent = m.group(1)
+    lines = full_text[m.end():].splitlines()
+    block = []
+    for ln in lines[:25]:
+        if block:
+            cur_indent = ln[:len(ln) - len(ln.lstrip())]
+            sibling_stmt = (re.match(r'^[A-Za-z_]\w*\s*=', ln.lstrip()) and cur_indent == indent)
+            dedent = bool(ln.strip()) and len(cur_indent) < len(indent)
+            if sibling_stmt or dedent:
+                break
+        block.append(ln)
+    return _flags_in("\n".join(block))
+
+
+def _stage_flagsets(task_dir, files):
+    """stage_id -> (flagset, order, file, line) for every parseable 'stN': <expr> dict
+    entry, resolving one level of bare-identifier indirection. `order` is the numeric
+    suffix of stN-style ids (so st1 < st4 < st5), falling back to file line number for
+    non-numeric ids -- used by subset/cross-reference collapse to tell earlier from
+    later stages."""
+    out = {}
+    for rel in files:
+        if not rel.endswith(_PY):
+            continue
+        text = _read(os.path.join(task_dir, rel))
+        for i, line in enumerate(text.splitlines(), 1):
+            m = re.match(r'\s*["\'](st\d+|[a-z_]+)["\']\s*:\s*(.+?),?\s*$', line)
+            if not m:
+                continue
+            sid, expr = m.group(1), m.group(2).strip().rstrip(",")
+            if expr in ("True", "False", ""):
+                continue
+            flags = _resolve_var_flags(text, expr) if _BARE_IDENT_RE.match(expr) else _flags_in(expr)
+            if not flags or sid in out:
+                continue
+            num_m = _STAGE_NUM_RE.search(sid)
+            order = int(num_m.group(1)) if num_m else i
+            out[sid] = (flags, order, rel, i)
+    return out
+
+
+def _subset_collapse(task_dir, files):
+    """Stage A's flagset is a STRICT subset of stage B's (A != B, not an exact dup --
+    that's _prereq_collapse's job). A offers no evidence beyond what B already proves:
+    the real-world miss was st4 = f("console_authenticated") vs
+    st5 = f("console_authenticated") and f("settlement_read") -- textually different,
+    so an exact-match check never sees it, but st4 is still fully subsumed by st5."""
+    fs = _stage_flagsets(task_dir, files)
+    out = []
+    for a, (fa, oa, fla, la) in fs.items():
+        for b, (fb, ob, flb, lb) in fs.items():
+            if a == b or not fa or not (fa < fb):
+                continue
+            out.append({"file": fla, "line": la, "stage": a, "superset_stage": b,
+                        "flags": sorted(fa), "superset_flags": sorted(fb),
+                        "why": f"stage {a} is credited by {sorted(fa)}, a strict subset of stage "
+                               f"{b}'s own requirement {sorted(fb)} — {a} has no independent "
+                               f"evidence beyond what {b} already proves (subset-collapse)"})
+    return out
+
+
+def _crossref_collapse(task_dir, files):
+    """An EARLIER stage's OR/AND-chain (>=2 flags, directly or via one level of
+    variable indirection) already contains the ENTIRE flagset of some LATER stage --
+    so the earlier stage can fire purely because the later milestone fired, with no
+    evidence of its own. Real-world miss: st1 = recon = any_step(...) or
+    f("sqli_observed") or f("console_authenticated"); st4 = f("console_authenticated")
+    is strictly later and fully contained in st1's OR-chain."""
+    fs = _stage_flagsets(task_dir, files)
+    out = []
+    for a, (fa, oa, fla, la) in fs.items():
+        if len(fa) < 2:
+            continue
+        for b, (fb, ob, flb, lb) in fs.items():
+            if a == b or not fb or ob <= oa or not (fb <= fa):
+                continue
+            out.append({"file": fla, "line": la, "stage": a, "later_stage": b,
+                        "flags": sorted(fa), "later_flags": sorted(fb),
+                        "why": f"stage {a} (an earlier stage) is credited via an OR/AND-chain "
+                               f"that already includes {sorted(fb)} — the entire evidence later "
+                               f"stage {b} needs — so {a} can fire purely because {b}'s own "
+                               f"milestone fired, with no independent evidence of its own "
+                               f"(OR-chain cross-reference collapse)"})
+    return out
+
+
+def _spoofable(task_dir, files):
+    sigs = _prereq_collapse(task_dir, files)
+    sigs += _subset_collapse(task_dir, files)
+    sigs += _crossref_collapse(task_dir, files)
+    for rel in files:
+        if not rel.endswith(_PY):
+            continue
+        for i, line in enumerate(_read(os.path.join(task_dir, rel)).splitlines(), 1):
+            narr = _NARRATION_RE.search(line)
+            sub = _SUBSTRING_CREDIT_RE.search(line)
+            if narr or sub:
+                why = []
+                if narr:
+                    why.append(f"references {narr.group(0)!r}")
+                if sub:
+                    why.append("whole-text substring/read credit")
+                sigs.append({"file": rel, "line": i, "text": line.strip()[:180],
+                             "why": "; ".join(why)})
+    return {"label": "[Fail - Spoofable or Gating Rubric] (spoof half)",
+            "signals": sigs,
+            "files_to_read": files,
+            "note": "reader confirms each: is the decisive stage credited from protected/observable "
+                    "evidence (endpoint+response, audit events) or from narration/substring? A comment "
+                    "disclaiming narration use is NOT a fail."}
+
+
+def _reward_gating(task_dir, files):
+    sigs = []
+    targets = [f for f in files if f.endswith(".sh")] + \
+              [f for f in ("tests/behavior/verify.py", "tests/test.sh") if os.path.exists(os.path.join(task_dir, f))]
+    for rel in dict.fromkeys(targets):
+        for i, line in enumerate(_read(os.path.join(task_dir, rel)).splitlines(), 1):
+            if _GATE_RE.search(line):
+                sigs.append({"file": rel, "line": i, "text": line.strip()[:180]})
+    return {"label": "[Fail - Spoofable or Gating Rubric] (gating half)",
+            "signals": sigs,
+            "files_to_read": list(dict.fromkeys(targets)),
+            "note": "reader confirms the OFFICIAL reward comes from the exploit/behavior check, "
+                    "not from the staged-rubric score."}
+
+
+def find(task_dir):
+    rubric = _find_rubric(task_dir)
+    files = _stage_files(task_dir)
+    stages = _parse_stages(task_dir, rubric)
+    reader_files = ([rubric["path"]] if rubric["present"] else []) + files
+    return {
+        "task_dir": os.path.abspath(task_dir),
+        "rubric": {"present": rubric["present"], "path": rubric["path"]},
+        "stage_files": files,
+        "stage_count": len(stages),
+        "checks": {
+            "intended_path": _intended_path(stages),
+            "spoofable": _spoofable(task_dir, reader_files),
+            "reward_gating": _reward_gating(task_dir, files),
+        },
+    }
+
+
+def _summary(r):
+    o = [f"RB1 FINDER — {r['task_dir']}",
+         f"  stages/rubric.toml present: {r['rubric']['present']}  ({r['rubric']['path']})",
+         f"  stages parsed: {r['stage_count']}  stage/behavior files: {len(r['stage_files'])}"]
+    ip = r["checks"]["intended_path"]
+    o.append(f"  [Intended-Path Not Modeled] modeled={ip['modeled']}  categories={ip['categories']}")
+    for c in ip["candidates"]:
+        o.append(f"     CANDIDATE  {c['issue']}")
+    sp = r["checks"]["spoofable"]
+    o.append(f"  [Spoofable] signals={len(sp['signals'])} (reader confirms)")
+    for s in sp["signals"][:15]:
+        o.append(f"     signal {s['file']}:{s['line']}  {s['why']}  — {s.get('text', '')}")
+    rg = r["checks"]["reward_gating"]
+    o.append(f"  [Gating] signals={len(rg['signals'])}")
+    for s in rg["signals"][:10]:
+        o.append(f"     GATE?  {s['file']}:{s['line']}  — {s['text']}")
+    o.append("  NOTE: finder points. The reader opens rubric.toml + the stage code + the reward wiring and decides.")
+    return "\n".join(o)
+
+
+def main(argv):
+    if not argv or not os.path.isdir(argv[0]):
+        print("usage: rb1_finder.py <task_dir> [--json OUT]", file=sys.stderr)
+        return 2
+    r = find(argv[0])
+    if "--json" in argv:
+        with open(argv[argv.index("--json") + 1], "w") as f:
+            json.dump(r, f, indent=2)
+    print(_summary(r))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

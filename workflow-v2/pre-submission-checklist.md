@@ -378,6 +378,13 @@ LEAK='(^|[^a-z0-9])(idor|bola|sqli|sql[ _-]?injection|ssrf|request[ _-]?forgery|
   - not a broken env.
   It need **not** have reached the vuln, so 0/5 can pass. If no trial reached the sink, re-check VU4
   against the app.
+  - **5/5 solve (too easy):** first classify *how*. Via a **leak/shortcut/mis-grade** → it's a **defect**;
+    close the second path so credit *causally requires* the intended step, then re-run (this is the first
+    pass, not a ceiling). Via the **genuine intended chain** → harden once (gl §5.1); if it stays 5/5 and
+    the only remaining levers would fail VU4/VU2/VU3, **declare a class ceiling** — stop the loop, write a
+    difficulty-escalation memo (template: `httpd-ssi` memo at repo root), and hand the disposition
+    (waiver / swap class / authorize redesign) to the batch owner. See **gl §5.1b**. Leak-then-reuse
+    credential/token chains are a known ceiling (2 on record: `httpd-ssi`, `gitea-mirror-sync`).
 
 ---
 

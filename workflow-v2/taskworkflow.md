@@ -73,7 +73,8 @@ P5 Fill the 3 submission fields + package + SUBMIT ── any dim < 5 / box unti
 REVIEWER  (Part 7 — in this workspace, you, wearing the reviewer hat) ─────────────────
 Part 7  Pass@5 gate (EV5): read trajectories/pass@k/ (deepseek ×5); count BEHAVIOR-solves;
         write Model Failure Reason (one paragraph per non-solving trial, greppable in its trajectory)
-      ├─ 5 of 5 solve ─► too easy ─► HARDEN (gl §5.1) ─► reviewer pass@5 ─► re-walk from P1 (regen evidence)
+      ├─ 5 of 5 solve via a LEAK/shortcut/mis-grade (marker reached off the intended chain) ─► DEFECT, not difficulty ─► close the 2nd path, re-run
+      ├─ 5 of 5 solve via the GENUINE chain ─► too easy ─► HARDEN (gl §5.1) ─► re-run; still 5/5 & §5.1 boxed in by VU4/VU2/VU3 ─► CLASS CEILING ─► escalation memo + batch-owner disposition (gl §5.1b)
       ├─ <3 non-errored, or no genuine non-solve (all refusal/infra) ─► fix infra/framing ─► re-run
       ├─ no trial reached the sink ─► check VU4 discoverability vs the APP (may still pass EV5)
       │ 0–4 of 5 solve, ≥3 non-errored, ≥1 genuine non-solve, each labelled (SOT)
